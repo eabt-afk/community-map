@@ -58,7 +58,7 @@
         <select id="sort">
           <option value="name">Name (A→Z)</option>
           <option value="primary">Main Practice Area (A→Z)</option>
-          <option value="neighborhood">Neighborhood</option>
+          <option value="category">Practice Areas (A→Z)</option>
         </select>
       </div>
     </div>
@@ -86,6 +86,7 @@
   const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
   const ATTRIB = '&copy; OpenStreetMap &copy; CARTO';
 
+  // Field aliases
   const FIELD_ALIASES = {
     name: ['_Name','Name','Organization','Agency','Clinic','Firm','Program'],
     address: ['_Address','Address','Location','Street'],
@@ -93,14 +94,23 @@
     lng: ['_Longitude','Longitude','Lng','Long'],
     website: ['_Website','Website','URL','Link','Site'],
     phone: ['_Phone','Phone','Telephone','Tel','Contact Phone'],
-    neighborhood: ['_Neighborhood','Neighborhood','Community Area','Area'],
     description: ['_Description','Description','Notes','About','Services'],
     category: ['_Category','Category','Practice Areas','Areas of Practice'],
     primary: ['_PrimaryCategory','PrimaryCategory'],
     intake: ['_Intake','Intake','Intake Process','How to Apply','How to Contact'],
     geoElig: ['_GeographicEligibility','Geographic Eligibility','Service Area','Geography','Counties','Zip Codes'],
-    finElig: ['_FinancialEligibility','Financial Eligibility','Income Eligibility','Income Limits','Fee','Sliding Scale','Cost']
+    finElig: ['_FinancialEligibility','Financial Eligibility','Income Eligibility','Income Limits','Fee','Sliding Scale','Cost'],
+    country: ['Country','Nation']
   };
+
+  // Columns to hide from “Other details” (and never display country)
+  const HIDE_FROM_OTHER = new Set([
+    ...FIELD_ALIASES.name, ...FIELD_ALIASES.address, ...FIELD_ALIASES.lat, ...FIELD_ALIASES.lng,
+    ...FIELD_ALIASES.website, ...FIELD_ALIASES.phone, ...FIELD_ALIASES.description,
+    ...FIELD_ALIASES.category, ...FIELD_ALIASES.primary, ...FIELD_ALIASES.intake,
+    ...FIELD_ALIASES.geoElig, ...FIELD_ALIASES.finElig, ...FIELD_ALIASES.country,
+    'City','STATE','State','Province','Zip','Zip Code','Postal Code'
+  ]);
 
   const els = {
     search: document.getElementById('search'),
@@ -119,7 +129,7 @@
   let filtered = [];
   const practiceAreas = new Set();
 
-  // Map init
+  // Map
   const map = L.map('map', { zoomControl: true, attributionControl: true });
   L.tileLayer(TILE_URL, { maxZoom: 19, attribution: ATTRIB }).addTo(map);
   const layerGroup = L.layerGroup().addTo(map);
@@ -148,16 +158,14 @@
   }
 
   function renderList(rows){
-    els.list.innerHTML = rows.map((r,i)=>{
+    els.list.innerHTML = rows.map(r=>{
       const id = r.__id;
       const name = pick(r, FIELD_ALIASES.name) || 'Untitled';
       const primary = pick(r, FIELD_ALIASES.primary);
-      const neigh = pick(r, FIELD_ALIASES.neighborhood);
-      const meta = [primary, neigh].filter(Boolean).join(' • ');
       return `<div class="legend-item${activeId===id?' active':''}" data-id="${id}" role="option" tabindex="0">
         <div>
           <h4>${name}</h4>
-          <div class="meta">${meta}</div>
+          <div class="meta">${primary ? primary : ''}</div>
         </div>
       </div>`;
     }).join('');
@@ -174,28 +182,32 @@
     const addr = pick(row, FIELD_ALIASES.address);
     const site = pick(row, FIELD_ALIASES.website);
     const phone = pick(row, FIELD_ALIASES.phone);
-    const neigh = pick(row, FIELD_ALIASES.neighborhood);
     const desc = pick(row, FIELD_ALIASES.description);
     const cats = splitCats(pick(row, FIELD_ALIASES.category));
+    const primary = pick(row, FIELD_ALIASES.primary);
     const intake = pick(row, FIELD_ALIASES.intake);
     const geo = pick(row, FIELD_ALIASES.geoElig);
     const fin = pick(row, FIELD_ALIASES.finElig);
 
-    // Other details from remaining headers
-    const skip = new Set([].concat(...Object.values(FIELD_ALIASES)));
+    // Other details (exclude hidden/system columns)
     const other = [];
     for (const h of headers){
-      if (skip.has(h)) continue;
+      if (HIDE_FROM_OTHER.has(h)) continue;
       const val = row[h];
       if (val !== undefined && String(val).trim() !== '') other.push(`<div class="kv"><b>${h}:</b> ${String(val).trim()}</div>`);
     }
 
+    // Address → Google Maps link
+    const addrHtml = addr
+      ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`
+      : '';
+
     els.detail.innerHTML = `
       <h2>${name}</h2>
+      ${primary ? `<div class="kv"><b>Main Practice Area:</b> ${primary}</div>` : ''}
       ${cats.length? `<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
       <div class="grid">
-        ${addr? `<div class="kv"><b>Address:</b> ${addr}</div>`:''}
-        ${neigh? `<div class="kv"><b>Neighborhood:</b> ${neigh}</div>`:''}
+        ${addrHtml? `<div class="kv"><b>Address:</b> ${addrHtml}</div>`:''}
         ${phone? `<div class="kv"><b>Phone:</b> ${phone}</div>`:''}
         ${site? `<div class="kv"><b>Website:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
       </div>
@@ -250,7 +262,6 @@
         pick(r, FIELD_ALIASES.name),
         pick(r, FIELD_ALIASES.address),
         pick(r, FIELD_ALIASES.description),
-        pick(r, FIELD_ALIASES.neighborhood),
         pick(r, FIELD_ALIASES.category),
         pick(r, FIELD_ALIASES.intake),
         pick(r, FIELD_ALIASES.geoElig),
@@ -264,8 +275,11 @@
       if(sortBy==='primary'){
         return slug(pick(a, FIELD_ALIASES.primary)).localeCompare(slug(pick(b, FIELD_ALIASES.primary)));
       }
-      const key = sortBy==='name' ? FIELD_ALIASES.name : FIELD_ALIASES.neighborhood;
-      return slug(pick(a, key)).localeCompare(slug(pick(b, key)));
+      if(sortBy==='category'){
+        return slug(pick(a, FIELD_ALIASES.category)).localeCompare(slug(pick(b, FIELD_ALIASES.category)));
+      }
+      // default: name
+      return slug(pick(a, FIELD_ALIASES.name)).localeCompare(slug(pick(b, FIELD_ALIASES.name)));
     });
 
     renderMarkers(filtered);
