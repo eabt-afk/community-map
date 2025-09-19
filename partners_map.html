@@ -30,7 +30,9 @@
   .detail h2{margin:0 0 6px 0;font-size:18px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .kv{font-size:14px}
-  .kv b{display:inline-block;min-width:160px}
+  /* Tighten label/value spacing: no extra gap after label */
+  .kv b{display:inline;font-weight:700;margin-right:0;padding-right:0}
+  .kv a{text-decoration:underline}
   .section-title{margin-top:10px;font-weight:700}
   .pill{display:inline-block;background:#111827;color:#fff;border-radius:999px;padding:2px 8px;font-size:12px;margin:2px 4px 0 0}
   .empty{color:#6b7280}
@@ -103,7 +105,7 @@
     country: ['Country','Nation']
   };
 
-  // Columns to hide from “Other details” (and never display country)
+  // Hide these from “Other details” (and never show Country)
   const HIDE_FROM_OTHER = new Set([
     ...FIELD_ALIASES.name, ...FIELD_ALIASES.address, ...FIELD_ALIASES.lat, ...FIELD_ALIASES.lng,
     ...FIELD_ALIASES.website, ...FIELD_ALIASES.phone, ...FIELD_ALIASES.description,
@@ -194,9 +196,10 @@
     for (const h of headers){
       if (HIDE_FROM_OTHER.has(h)) continue;
       const val = row[h];
-      if (val !== undefined && String(val).trim() !== '') other.push(`<div class="kv"><b>${h}:</b> ${String(val).trim()}</div>`);
+      if (val !== undefined && String(val).trim() !== '') other.push(`<div class="kv"><b>${h}:</b>${String(val).trim()}</div>`);
     }
-     // Address → Google Maps link
+
+    // Address → Google Maps link (no space after label)
     const addrHtml = addr
       ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`
       : '';
