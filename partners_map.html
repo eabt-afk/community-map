@@ -196,7 +196,6 @@
       const val = row[h];
       if (val !== undefined && String(val).trim() !== '') other.push(`<div class="kv"><b>${h}:</b> ${String(val).trim()}</div>`);
     }
-
     // Address → Google Maps link
     const addrHtml = addr
       ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`
@@ -204,12 +203,12 @@
 
     els.detail.innerHTML = `
       <h2>${name}</h2>
-      ${primary ? `<div class="kv"><b>Main Practice Area:</b> ${primary}</div>` : ''}
+      ${primary ? `<div class="kv"><b>Main Practice Area:</b>${primary}</div>` : ''}
       ${cats.length? `<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
       <div class="grid">
-        ${addrHtml? `<div class="kv"><b>Address:</b> ${addrHtml}</div>`:''}
-        ${phone? `<div class="kv"><b>Phone:</b> ${phone}</div>`:''}
-        ${site? `<div class="kv"><b>Website:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
+        ${addrHtml? `<div class="kv"><b>Address:</b>${addrHtml}</div>`:''}
+        ${phone? `<div class="kv"><b>Phone:</b>${phone}</div>`:''}
+        ${site? `<div class="kv"><b>Website:</b><a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
       </div>
       ${desc? `<div class="section-title">About</div><div>${desc}</div>`:''}
       ${intake? `<div class="section-title">Intake</div><div>${intake}</div>`:''}
