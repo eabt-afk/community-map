@@ -7,8 +7,8 @@
 
 <!-- Inter Tight font -->
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
+
 <style>
   :root{
     --hotpink: hsla(323, 98%, 49%, 0.9);
@@ -34,13 +34,15 @@
   .legend-list .item.active{background:#eef2ff}
 
   .stage{display:grid;grid-template-rows:minmax(460px,60vh) auto;gap:12px}
-  #map{border:1px solid #e5e7eb;
-  border-radius:14px;
-  overflow:hidden;   /* contains map + popups inside rounded corners */
-  height:100%;}
+  #map{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    overflow:hidden;   /* contain tiles/popups inside the rounded box */
+    height:100%;
+  }
   .detail{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative}
   .detail h2{margin:0 0 6px 0;font-size:17px}
-  .detail .kv{font-size:13px}        /* smaller detail text */
+  .detail .kv{font-size:13px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .kv b{display:inline;font-weight:700;margin-right:0;padding-right:0}
   .kv a{text-decoration:underline}
@@ -50,7 +52,7 @@
   .detail-close{border:none;background:#f3f4f6;border-radius:10px;font-size:18px;line-height:1;padding:4px 10px;cursor:pointer}
   .detail-close:hover{background:#e5e7eb}
 
-  /* Leaflet popup font size to match */
+  /* popup styling */
   .leaflet-container .leaflet-popup-content{font-family:"Inter Tight",system-ui,sans-serif;font-size:13px}
   .leaflet-container .leaflet-popup-content-wrapper{border-radius:10px}
   .leaflet-container .leaflet-popup-tip{opacity:.95}
@@ -59,9 +61,6 @@
     .layout{grid-template-columns:1fr}
     .stage{grid-template-rows:360px auto}
   }
-
-  /* hidden version tag */
-  #map-version{display:none}
 </style>
 </head>
 <body>
@@ -99,19 +98,17 @@
   </main>
 </div>
 
-<div id="map-version">v2025-09-19-4</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script>
 (function(){
-  console.log("Partners Map build v2025-09-19-4");
-
+  // CSV source
   const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR1A8WkC-BbA94Ipm6Sit3qx5ndFoTG-zBBqnZPkNDEvHa11O0BJTRCWepWyo6RhqH58ZK1kQXO9v6P/pub?gid=1272818494&single=true&output=csv';
   const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
   const ATTRIB = '&copy; OpenStreetMap &copy; CARTO';
   const MARKER_STYLE = { radius:6, weight:1.5, color:'var(--hotpink-border)', fillColor:'var(--hotpink)', fillOpacity:0.9 };
 
+  // Field aliases
   const FIELD_ALIASES = {
     name: ['_Name','Name','Organization','Agency','Clinic','Firm','Program'],
     address: ['_Address','Address','Location','Street'],
@@ -128,6 +125,7 @@
     country: ['Country','Nation']
   };
 
+  // Hide from “Other details”
   const HIDE_FROM_OTHER = new Set([
     ...FIELD_ALIASES.name, ...FIELD_ALIASES.address, ...FIELD_ALIASES.lat, ...FIELD_ALIASES.lng,
     ...FIELD_ALIASES.website, ...FIELD_ALIASES.phone, ...FIELD_ALIASES.description,
@@ -153,6 +151,7 @@
   let filtered = [];
   const practiceAreas = new Set();
 
+  // Map (users can pan/zoom; contained via CSS)
   const map = L.map('map', { zoomControl: true, attributionControl: true });
   L.tileLayer(TILE_URL, { maxZoom: 19, attribution: ATTRIB }).addTo(map);
   const layerGroup = L.layerGroup().addTo(map);
@@ -181,6 +180,7 @@
     });
   }
 
+  // Popup HTML (name, GMaps-linked address, categories, "website" link)
   function popupHTML(row){
     const name = pick(row, FIELD_ALIASES.name) || 'Untitled';
     const addr = pick(row, FIELD_ALIASES.address);
@@ -209,15 +209,20 @@
 
       const m = L.circleMarker([lat,lng], MARKER_STYLE);
       m.__id = r.__id;
-
-      // Only a popup (no permanent labels)
       m.bindPopup(popupHTML(r), { autoPan:true, closeButton:true, maxWidth: 280 });
 
-      // Toggle: click same marker closes + zooms out
       m.on('click', ()=>{
-        if (activeId === r.__id){ m.closePopup(); resetSelection(true); }
-        else { selectById(r.__id, true); m.openPopup(); }
+        // Always open the details panel on marker click
+        if (activeId === r.__id){
+          // If clicking the same marker again, just keep it selected; popup handles open/close.
+          m.openPopup();
+          selectById(r.__id, true);
+        } else {
+          selectById(r.__id, true);
+          m.openPopup();
+        }
       });
+
       m.on('mouseover', ()=> m.setStyle({radius:7}));
       m.on('mouseout',  ()=> m.setStyle({radius: m.__id===activeId? 9 : 6}));
       markers.push(m);
@@ -243,13 +248,19 @@
     els.list.querySelectorAll('.item').forEach(el=>{
       el.addEventListener('click', ()=>{
         const id = Number(el.dataset.id);
-        if (activeId === id){ resetSelection(true); } else { selectById(id, true); }
+        // Selecting from the list should also update the details panel
+        selectById(id, true);
+        // Open the corresponding marker popup too (for consistency)
+        const m = markers.find(mm => mm.__id === id);
+        if (m){ m.openPopup(); }
       });
       el.addEventListener('keydown', e=>{
         if(e.key==='Enter' || e.key===' '){
           e.preventDefault();
           const id = Number(el.dataset.id);
-          if (activeId === id){ resetSelection(true); } else { selectById(id, true); }
+          selectById(id, true);
+          const m = markers.find(mm => mm.__id === id);
+          if (m){ m.openPopup(); }
         }
       });
     });
@@ -299,21 +310,21 @@
     `;
 
     const closeBtn = document.getElementById('detail-close');
-    if (closeBtn){ closeBtn.addEventListener('click', ()=> resetSelection(true)); }
+    if (closeBtn){
+      closeBtn.addEventListener('click', ()=>{
+        // Close panel and close any open popup
+        activeId = null;
+        els.detail.innerHTML = '<div class="empty" style="color:#6b7280">Select a partner from the list or map to see details.</div>';
+        markers.forEach(m=> m.closePopup());
+        highlightActive();
+        if (currentBounds){ map.fitBounds(currentBounds, {padding:[20,20]}); }
+      });
+    }
   }
 
   function highlightActive(){
     els.list.querySelectorAll('.item').forEach(el=> el.classList.toggle('active', Number(el.dataset.id)===activeId));
     markers.forEach(m=> m.setStyle({radius: m.__id===activeId? 9 : 6, fillColor:'var(--hotpink)', color:'var(--hotpink-border)', fillOpacity:0.9 }));
-  }
-
-  function resetSelection(zoomOut){
-    activeId = null;
-    renderDetail(null);
-    highlightActive();
-    if (zoomOut && currentBounds){
-      map.fitBounds(currentBounds, {padding:[20,20]});
-    }
   }
 
   function selectById(id, moveMap){
@@ -360,16 +371,21 @@
       return slug(pick(a, FIELD_ALIASES.name)).localeCompare(slug(pick(b, FIELD_ALIASES.name)));
     });
 
+    // Build UI
     renderMarkers(filtered);
     renderList(filtered);
 
+    // Reset detail if active selection isn't in filtered set
     if (!filtered.find(r=>r.__id===activeId)) {
-      resetSelection(false);
+      activeId = null;
+      els.detail.innerHTML = '<div class="empty" style="color:#6b7280">Select a partner from the list or map to see details.</div>';
+      highlightActive();
     } else {
       highlightActive();
     }
   }
 
+  // Load CSV and init
   Papa.parse(CSV_URL, {
     download: true, header: true, skipEmptyLines: true,
     complete: function(results){
