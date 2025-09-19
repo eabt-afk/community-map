@@ -36,11 +36,14 @@
 
   .stage{display:grid;grid-template-rows:minmax(460px,60vh) auto;gap:12px}
   #map{border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}
-  .detail{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+  .detail{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative}
   .detail h2{margin:0 0 6px 0;font-size:18px}
+  .detail-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+  .detail-close{border:none;background:#f3f4f6;border-radius:10px;font-size:18px;line-height:1;padding:4px 10px;cursor:pointer}
+  .detail-close:hover{background:#e5e7eb}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .kv{font-size:14px}
-  /* Tight labels: no extra gap after label */
+  /* Tight labels */
   .kv b{display:inline;font-weight:700;margin-right:0;padding-right:0}
   .kv a{text-decoration:underline}
   .section-title{margin-top:10px;font-weight:700}
@@ -58,7 +61,6 @@
   }
 
   @media (max-width:720px){
-    /* On very small screens, still keep two rows on the right but stack columns */
     .layout{grid-template-columns:1fr}
     .stage{grid-template-rows:360px auto}
   }
@@ -162,6 +164,7 @@
   const layerGroup = L.layerGroup().addTo(map);
   const markers = [];
   let activeId = null;
+  let currentBounds = null; // bounds of current filtered set
 
   function boundsFromRows(rows){
     const b = L.latLngBounds([]);
@@ -198,8 +201,17 @@
     }).join('');
 
     els.list.querySelectorAll('.item').forEach(el=>{
-      el.addEventListener('click', ()=> selectById(Number(el.dataset.id), true));
-      el.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectById(Number(el.dataset.id), true);} });
+      el.addEventListener('click', ()=>{
+        const id = Number(el.dataset.id);
+        if (activeId === id){ resetSelection(true); } else { selectById(id, true); }
+      });
+      el.addEventListener('keydown', e=>{
+        if(e.key==='Enter' || e.key===' '){
+          e.preventDefault();
+          const id = Number(el.dataset.id);
+          if (activeId === id){ resetSelection(true); } else { selectById(id, true); }
+        }
+      });
     });
   }
 
@@ -230,7 +242,10 @@
       : '';
 
     els.detail.innerHTML = `
-      <h2>${name}</h2>
+      <div class="detail-header">
+        <h2>${name}</h2>
+        <button class="detail-close" id="detail-close" aria-label="Close">×</button>
+      </div>
       ${primary ? `<div class="kv"><b>Main Practice Area:</b>${primary}</div>` : ''}
       ${cats.length? `<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
       <div class="grid">
@@ -244,6 +259,12 @@
       ${fin? `<div class="section-title">Financial Eligibility</div><div>${fin}</div>`:''}
       ${other.length? `<div class="section-title">Other details</div>${other.join('')}`:''}
     `;
+
+    // Exit button → close + zoom out
+    const closeBtn = document.getElementById('detail-close');
+    if (closeBtn){
+      closeBtn.addEventListener('click', ()=> resetSelection(true));
+    }
   }
 
   function renderMarkers(rows){
@@ -261,19 +282,32 @@
       const name = pick(r, FIELD_ALIASES.name) || '';
       m.bindTooltip(name, {permanent:true, direction:'top', offset:[0,-8], className:'name-label'});
 
-      m.on('click', ()=> selectById(r.__id, true));
+      m.on('click', ()=>{
+        if (activeId === r.__id){ resetSelection(true); }
+        else { selectById(r.__id, true); }
+      });
       m.on('mouseover', ()=> m.setStyle({radius:7}));
       m.on('mouseout',  ()=> m.setStyle({radius: m.__id===activeId? 9 : 6}));
       markers.push(m);
       layerGroup.addLayer(m);
     });
-    map.fitBounds(boundsFromRows(rows), {padding:[20,20]});
+    // Save current bounds for zoom-out resets
+    currentBounds = boundsFromRows(rows);
+    map.fitBounds(currentBounds, {padding:[20,20]});
   }
 
   function highlightActive(){
-    // Close previously “open” by simply switching active state
     els.list.querySelectorAll('.item').forEach(el=> el.classList.toggle('active', Number(el.dataset.id)===activeId));
     markers.forEach(m=> m.setStyle({radius: m.__id===activeId? 9 : 6, fillColor:'var(--hotpink)', color:'var(--hotpink-border)', fillOpacity:0.9 }));
+  }
+
+  function resetSelection(zoomOut){
+    activeId = null;
+    renderDetail(null);
+    highlightActive();
+    if (zoomOut && currentBounds){
+      map.fitBounds(currentBounds, {padding:[20,20]});
+    }
   }
 
   function selectById(id, moveMap){
@@ -326,12 +360,10 @@
     renderMarkers(filtered);
     renderList(filtered);
 
-    // If the current active partner got filtered out, clear details
+    // If active partner filtered out, clear selection
     if (!filtered.find(r=>r.__id===activeId)) {
-      activeId = null;
-      renderDetail(null);
-    } else if (activeId) {
-      // re-highlight selection after re-render
+      resetSelection(false);
+    } else {
       highlightActive();
     }
   }
