@@ -34,8 +34,10 @@
   .legend-list .item.active{background:#eef2ff}
 
   .stage{display:grid;grid-template-rows:minmax(460px,60vh) auto;gap:12px}
-  #map{border:1px solid #e5e7eb;border-radius:14px; /* allow popups to render outside */
-       overflow:visible}
+  #map{border:1px solid #e5e7eb;
+  border-radius:14px;
+  overflow:hidden;   /* contains map + popups inside rounded corners */
+  height:100%;}
   .detail{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative}
   .detail h2{margin:0 0 6px 0;font-size:17px}
   .detail .kv{font-size:13px}        /* smaller detail text */
