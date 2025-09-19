@@ -196,7 +196,7 @@
       const val = row[h];
       if (val !== undefined && String(val).trim() !== '') other.push(`<div class="kv"><b>${h}:</b> ${String(val).trim()}</div>`);
     }
-    // Address → Google Maps link
+     // Address → Google Maps link
     const addrHtml = addr
       ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`
       : '';
