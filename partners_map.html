@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Partners Map</title>
 
-<!-- Inter Tight -->
+<!-- Inter Tight font -->
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
@@ -43,29 +43,16 @@
   .detail-close:hover{background:#e5e7eb}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .kv{font-size:14px}
+  /* Tight labels */
   .kv b{display:inline;font-weight:700;margin-right:0;padding-right:0}
   .kv a{text-decoration:underline}
   .section-title{margin-top:10px;font-weight:700}
   .pill{display:inline-block;background:#111827;color:#fff;border-radius:999px;padding:2px 8px;font-size:12px;margin:2px 4px 0 0}
 
-  /* Map name labels */
-  .name-label{
-    background:#fff;
-    border:1px solid #e5e7eb;
-    border-radius:8px;
-    padding:2px 6px;
-    font-size:12px;
-    color:#111827;
-    box-shadow:0 1px 3px rgba(0,0,0,.08);
-  }
-
   @media (max-width:720px){
     .layout{grid-template-columns:1fr}
     .stage{grid-template-rows:360px auto}
   }
-
-  /* (Optional) tiny version tag (hidden) */
-  #map-version{display:none}
 </style>
 </head>
 <body>
@@ -103,14 +90,10 @@
   </main>
 </div>
 
-<div id="map-version">v2025-09-19-3</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script>
 (function(){
-  console.log("Partners Map build v2025-09-19-3");
-
   // Your Google Sheets CSV URL
   const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR1A8WkC-BbA94Ipm6Sit3qx5ndFoTG-zBBqnZPkNDEvHa11O0BJTRCWepWyo6RhqH58ZK1kQXO9v6P/pub?gid=1272818494&single=true&output=csv';
 
@@ -164,7 +147,7 @@
   let filtered = [];
   const practiceAreas = new Set();
 
-  // Map
+  // Map (gentle pan/zoom)
   const map = L.map('map', { zoomControl: true, attributionControl: true });
   L.tileLayer(TILE_URL, { maxZoom: 19, attribution: ATTRIB }).addTo(map);
   const layerGroup = L.layerGroup().addTo(map);
@@ -209,7 +192,6 @@
     els.list.querySelectorAll('.item').forEach(el=>{
       el.addEventListener('click', ()=>{
         const id = Number(el.dataset.id);
-        // TOGGLE behavior: re-click closes + zooms out
         if (activeId === id){ resetSelection(true); } else { selectById(id, true); }
       });
       el.addEventListener('keydown', e=>{
@@ -274,6 +256,24 @@
     }
   }
 
+  // Build popup HTML for markers (name, address, categories, "website" link)
+  function popupHTML(row){
+    const name = pick(row, FIELD_ALIASES.name) || 'Untitled';
+    const addr = pick(row, FIELD_ALIASES.address);
+    const cats = splitCats(pick(row, FIELD_ALIASES.category));
+    const site = pick(row, FIELD_ALIASES.website);
+    const catsText = cats.join(', ');
+    const websiteLink = site ? `<a href="${site}" target="_blank" rel="noopener">website</a>` : '';
+    return `
+      <div style="font-family:'Inter Tight',system-ui,sans-serif">
+        <div style="font-weight:600">${name}</div>
+        ${addr ? `<div>${addr}</div>` : ``}
+        ${catsText ? `<div style="color:#6b7280;font-size:12px">${catsText}</div>` : ``}
+        ${websiteLink}
+      </div>
+    `;
+  }
+
   function renderMarkers(rows){
     layerGroup.clearLayers();
     markers.length = 0;
@@ -285,14 +285,18 @@
       const m = L.circleMarker([lat,lng], MARKER_STYLE);
       m.__id = r.__id;
 
-      // Permanent name label
-      const name = pick(r, FIELD_ALIASES.name) || '';
-      m.bindTooltip(name, {permanent:true, direction:'top', offset:[0,-8], className:'name-label'});
+      // Bind popup with the requested fields
+      m.bindPopup(popupHTML(r), { autoPan:true, closeButton:true, maxWidth: 280 });
 
-      // TOGGLE on marker click
+      // Toggle on marker click: open popup + select; re-click closes + zooms out
       m.on('click', ()=>{
-        if (activeId === r.__id){ resetSelection(true); }
-        else { selectById(r.__id, true); }
+        if (activeId === r.__id){
+          m.closePopup();
+          resetSelection(true);
+        } else {
+          selectById(r.__id, true);
+          m.openPopup();
+        }
       });
       m.on('mouseover', ()=> m.setStyle({radius:7}));
       m.on('mouseout',  ()=> m.setStyle({radius: m.__id===activeId? 9 : 6}));
