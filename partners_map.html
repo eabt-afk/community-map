@@ -157,18 +157,18 @@ body{
 
 /* Right column: detail ABOVE map */
 .stage{
+.stage {
   display:grid;
-  grid-template-rows:auto minmax(460px,60vh);
+  grid-template-rows:auto 1fr; /* detail auto-height, map fills remaining space */
   gap:12px;
   align-content:start;
 }
 
 /* Map box */
-#map{
+#map {
   border:1px solid #e5e7eb;
   border-radius:14px;
-  overflow:hidden;
-  height:100%;
+  height:100%;     /* fill the grid cell */
   background:#fff;
 }
 
