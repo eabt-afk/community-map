@@ -15,7 +15,6 @@
   --hotpink-border: hsla(323, 98%, 35%, 1);
 }
 
-/* Global */
 body{
   margin:0;
   font-family:"Raleway",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
@@ -46,7 +45,9 @@ body{
 .controls label,
 .legend-header {
   color:#111;
-  font-weight:700;
+  font-weight:800;
+  font-size:18px;  /* Bigger than partner names */
+  line-height:1.2;
 }
 
 .row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -95,7 +96,7 @@ body{
   background:#f3f4f6;
 }
 
-/* Legend panel (WHITE) */
+/* Legend */
 .legend{
   background:#fff;
   border:1px solid #e5e7eb;
@@ -106,7 +107,6 @@ body{
 }
 .legend-header {
   padding:10px 12px;
-  font-weight:700;
   border-bottom:1px solid var(--hotpink);
 }
 .legend-list .item {
@@ -142,16 +142,16 @@ body{
   align-content:start;
 }
 
-/* Map box (remains white card edge) */
+/* Map box */
 #map{
   border:1px solid #e5e7eb;
   border-radius:14px;
   overflow:hidden;
   height:100%;
-  background:#fff; /* so bounds flash isn’t black */
+  background:#fff;
 }
 
-/* *** Black & white (grayscale) map overlay *** */
+/* Black & white overlay */
 #map .leaflet-tile {
   filter: grayscale(100%) saturate(0) contrast(1.05);
 }
@@ -306,6 +306,14 @@ body{
       m.__id=r.__id;
       m.bindPopup(popupHTML(r),{maxWidth:300,autoPan:true,autoPanPadding:[30,30]});
       m.on('click',()=>{selectById(r.__id,true);map.once('moveend',()=>m.openPopup());m.openPopup();});
+      m.on('popupclose',()=>{
+        if(activeId===m.__id){
+          activeId=null;
+          renderDetail(null);
+          document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
+        }
+        if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
+      });
       markers.push(m);layerGroup.addLayer(m);
     });
     currentBounds=boundsFromRows(rows);
@@ -327,15 +335,6 @@ body{
         selectById(id,true);
         const m=markers.find(mm=>mm.__id===id);
         if(m){map.once('moveend',()=>m.openPopup());m.openPopup();}
-      });
-      el.addEventListener('keydown',e=>{
-        if(e.key==='Enter'||e.key===' '){
-          e.preventDefault();
-          const id=Number(el.dataset.id);
-          selectById(id,true);
-          const m=markers.find(mm=>mm.__id===id);
-          if(m){map.once('moveend',()=>m.openPopup());m.openPopup();}
-        }
       });
     });
   }
@@ -363,10 +362,8 @@ body{
       </div>
       ${primary?`<div class="kv"><b>Main Practice Area:</b> ${primary}</div>`:''}
       ${cats.length?`<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
-
       ${addrHtml?`<div class="kv"><b>Address:</b> ${addrHtml}</div>`:''}
       ${site?`<div class="kv"><b>Website:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
-
       ${desc?`<div class="section-title">About</div><div>${desc}</div>`:''}
       ${intake?`<div class="section-title">Intake</div><div>${intake}</div>`:''}
       ${geo?`<div class="section-title">Geographic Eligibility</div><div>${geo}</div>`:''}
@@ -390,7 +387,6 @@ body{
     const row=filtered.find(r=>r.__id===activeId);
     if(!row) return;
     renderDetail(row);
-    // highlight list
     els.list.querySelectorAll('.item').forEach(el=>el.classList.toggle('active', Number(el.dataset.id)===activeId));
     if(moveMap){
       const lat=parseFloat(pick(row,FIELD_ALIASES.lat));
@@ -407,67 +403,4 @@ body{
     const sortBy=els.sort.value;
 
     filtered=data.filter(r=>{
-      const cats=splitCats(pick(r,FIELD_ALIASES.category));
-      const inCat=activeCats.length?cats.some(c=>activeCats.includes(c)):true;
-      const hay=[
-        pick(r,FIELD_ALIASES.name),
-        pick(r,FIELD_ALIASES.address),
-        pick(r,FIELD_ALIASES.description),
-        pick(r,FIELD_ALIASES.category),
-        pick(r,FIELD_ALIASES.intake),
-        pick(r,FIELD_ALIASES.geoElig),
-        pick(r,FIELD_ALIASES.finElig)
-      ].filter(Boolean).join(' ').toLowerCase();
-      const inSearch=q?hay.includes(q):true;
-      return inCat && inSearch;
-    });
-
-    filtered.sort((a,b)=>{
-      if(sortBy==='primary'){
-        const pa=pick(a,FIELD_ALIASES.primary)||(splitCats(pick(a,FIELD_ALIASES.category))[0]||'');
-        const pb=pick(b,FIELD_ALIASES.primary)||(splitCats(pick(b,FIELD_ALIASES.category))[0]||'');
-        return pa.localeCompare(pb);
-      }
-      if(sortBy==='category'){
-        return pick(a,FIELD_ALIASES.category).localeCompare(pick(b,FIELD_ALIASES.category));
-      }
-      return pick(a,FIELD_ALIASES.name).localeCompare(pick(b,FIELD_ALIASES.name));
-    });
-
-    renderMarkers(filtered);
-    renderList(filtered);
-
-    if(!filtered.find(r=>r.__id===activeId)){
-      activeId=null;
-      renderDetail(null);
-      els.list.querySelectorAll('.item').forEach(el=>el.classList.remove('active'));
-    }
-  }
-
-  // Load CSV
-  Papa.parse(CSV_URL,{
-    download:true,header:true,skipEmptyLines:true,
-    complete:res=>{
-      data=res.data.map((r,idx)=>{
-        const cats=splitCats(pick(r,FIELD_ALIASES.category));
-        cats.forEach(c=>practiceAreas.add(c));
-        return Object.assign({},r,{__id:idx+1});
-      });
-      // build chips + render
-      renderCategories();
-      applyFilters();
-
-      // listeners
-      els.search.addEventListener('input',applyFilters);
-      els.sort.addEventListener('change',applyFilters);
-      els.clearCats.addEventListener('click',clearCategoryFilters);
-    },
-    error:err=>{
-      console.error('CSV load error',err);
-      els.detail.innerHTML='<div style="color:#b91c1c">CSV could not be loaded. Make sure the Google Sheet is “Published to the web”.</div>';
-    }
-  });
-})();
-</script>
-</body>
-</html>
+      const cats=splitCats(pick(r,FIELD_ALIA
