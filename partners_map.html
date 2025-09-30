@@ -41,59 +41,46 @@ body{
   box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
 
-/* Labels and section headers in black */
+/* Labels and section headers */
 .controls label,
 .legend-header {
-  color:#111;
-  font-weight:800;
-  font-size:18px;  /* Bigger than partner names */
-  line-height:1.2;
+  color: var(--hotpink);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.2;
 }
 
-.row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px}
-
-/* Search input */
-#search {
-  width:100%;
-  padding:10px;
-  border:1px solid #d1d5db;
-  border-radius:10px;
-  background:#fff;
-  color:#111;
-  font-family:"Raleway",sans-serif;
-}
-
-/* Chips */
-.chips{display:flex;flex-wrap:wrap;gap:8px}
+/* Chips (practice areas) now hot pink */
 .chip {
-  border:1px solid #d1d5db;
-  background:#fff;
-  color:#111;
-  border-radius:999px;
-  padding:6px 10px;
-  cursor:pointer;
-  font-size:13px;
-  font-family:"Raleway",sans-serif;
+  border: 1px solid var(--hotpink-border);
+  background: var(--hotpink);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: "Raleway", sans-serif;
 }
 .chip.active {
-  background:var(--hotpink);
-  border-color:var(--hotpink);
-  color:#fff;
+  background: #fff;
+  border-color: var(--hotpink);
+  color: var(--hotpink);
+  font-weight: 600;
 }
 
-/* Clear button */
+/* Clear button stays outlined hot pink */
 .btn-clear {
-  border:1px solid var(--hotpink);
-  background:#fff;
-  color:var(--hotpink);
-  border-radius:999px;
-  padding:6px 10px;
-  font-size:12px;
-  cursor:pointer;
-  font-family:"Raleway",sans-serif;
+  border: 1px solid var(--hotpink);
+  background: #fff;
+  color: var(--hotpink);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: "Raleway", sans-serif;
 }
 .btn-clear:hover {
-  background:#f3f4f6;
+  background: #f3f4f6;
 }
 
 /* Legend */
