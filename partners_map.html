@@ -15,36 +15,46 @@
   --hotpink-border: hsla(323, 98%, 35%, 1);
 }
 
+/* Make the document fill the iframe height */
+html, body { height: 100%; }
+
 body{
   margin:0;
   font-family:"Raleway",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   background:#000; /* whole background black */
   font-size:14px;
-}
-
-.layout {
-  display:grid;
-  grid-template-columns:440px 1fr; /* wider sidebar on desktop */
-  gap:16px;
-  min-height:100vh;
-  padding:16px;
+  min-height:100vh; /* fill the iframe */
   box-sizing:border-box;
 }
 
-/* Responsive: shrink sidebar for smaller screens */
-@media (max-width:1200px){
-  .layout {
-    grid-template-columns:420px 1fr; /* back to default width */
-  }
+/* Single-column page; the map column fills remaining height */
+.layout {
+  display:grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  min-height:100vh;   /* full iframe height */
+  padding:16px;
+  gap:16px;
+  box-sizing:border-box;
 }
 
-@media (max-width:900px){
-  .layout {
-    grid-template-columns:1fr; /* stack sidebar above map */
-  }
+/* Top row with two panels: left=Partners (legend), right=Filters (controls) */
+.top-panels {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:16px;
 }
 
-/* Sidebar panels (filters + legend) WHITE */
+/* The main stage stacks: top-panels, then detail, then map fills rest */
+.stage {
+  display:grid;
+  grid-template-rows: auto auto 1fr; /* panels (auto), detail (auto), map (fills) */
+  gap:12px;
+  min-height:0; /* allow map to grow */
+  height:100%;
+}
+
+/* Panels (filters + legend) - white cards */
 .controls, .legend {
   background:#fff;
   border:1px solid #e5e7eb;
@@ -53,9 +63,6 @@ body{
   padding:14px;
   box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
-
-/* Add space below filters panel */
-.controls { margin-bottom: 16px; }
 
 /* Headers: hot pink */
 .controls label,
@@ -83,12 +90,12 @@ body{
   font-family:"Raleway",sans-serif;
 }
 
-/* Chips (practice areas): hot pink bg, WHITE text; invert on active */
+/* Chips (practice areas): hot pink bg, white text; invert on active */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip {
   border: 1px solid var(--hotpink-border);
   background: var(--hotpink);
-  color: #FFFFFF;               /* white text */
+  color: #FFFFFF;
   border-radius: 999px;
   padding: 6px 10px;
   cursor: pointer;
@@ -96,14 +103,14 @@ body{
   font-family: "Raleway", sans-serif;
 }
 .chip.active {
-  background: #fff;          /* invert when active */
+  background: #fff;
   border-color: var(--hotpink);
   color: var(--hotpink);
   font-weight: 600;
 }
-#category-filters {
-  margin-bottom: 16px; /* space beneath chips */
-}
+/* extra breathing room beneath chips before Sort By */
+#category-filters { margin-bottom: 16px; }
+
 /* Clear button (outlined hot pink) */
 .btn-clear {
   border: 1px solid var(--hotpink);
@@ -123,12 +130,16 @@ body{
   border:1px solid #e5e7eb;
   border-radius:14px;
   overflow:auto;
-  min-height:50vh;
   color:#111;
+  max-height: 45vh; /* keep it reasonable so the map gets space */
 }
 .legend-header {
   padding:10px 12px;
   border-bottom:1px solid var(--hotpink);
+}
+.legend-list {
+  overflow:auto;
+  max-height: calc(45vh - 48px); /* header height accounted for */
 }
 .legend-list .item {
   padding:10px 12px;
@@ -155,27 +166,7 @@ body{
   font-family:"Raleway",sans-serif;
 }
 
-/* Right column: detail ABOVE map */
-.stage{
-.stage {
-  display:grid;
-  grid-template-rows:auto 1fr; /* detail auto-height, map fills remaining space */
-  gap:12px;
-  align-content:start;
-}
-
-/* Map box */
-#map {
-  border:1px solid #e5e7eb;
-  border-radius:14px;
-  height:100%;     /* fill the grid cell */
-  background:#fff;
-}
-
-/* Grayscale tiles */
-#map .leaflet-tile { filter: grayscale(100%) saturate(0) contrast(1.05); }
-
-/* Detail panel (WHITE) */
+/* Detail panel (white card) */
 .detail{
   background:#fff;
   border:1px solid #e5e7eb;
@@ -191,11 +182,11 @@ body{
 .kv a{text-decoration:underline}
 .section-title{margin-top:10px;font-weight:700;font-size:13px}
 
-/* Category pills in description: hot pink bg + white text */
+/* Category pills in description */
 .pill{
   display:inline-block;
   background: var(--hotpink);
-  color:#FFFFFF;                 /* white text */
+  color:#FFFFFF;
   border-radius:999px;
   padding:2px 8px;
   font-size:11px;
@@ -207,49 +198,71 @@ body{
 .detail-close:hover{background:#e5e7eb}
 .detail .empty{color:var(--hotpink);font-weight:600}
 
+/* Map box fills remaining height */
+#map{
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  height:100%; /* fills the 1fr row */
+  background:#fff;
+  min-height: 300px; /* safety minimum */
+}
+
+/* Grayscale tiles */
+#map .leaflet-tile { filter: grayscale(100%) saturate(0) contrast(1.05); }
+
 /* Leaflet popup styling */
 .leaflet-container .leaflet-popup-content{font-family:"Raleway",system-ui,sans-serif;font-size:13px}
 .leaflet-container .leaflet-popup-content-wrapper{border-radius:10px}
 .leaflet-container .leaflet-popup-tip{opacity:.95}
 
-@media (max-width:720px){
-  .layout{grid-template-columns:1fr}
-  .stage{grid-template-rows:auto 360px}
+/* Responsive: stack panels on smaller screens */
+@media (max-width:1000px){
+  .top-panels {
+    grid-template-columns: 1fr; /* stack Partners above Filters */
+  }
+  .legend, .legend-list { max-height: none; }
 }
 </style>
 </head>
 <body>
 <div class="layout">
-  <aside class="sidebar">
-    <div class="controls">
-      <div class="row">
-        <label>Search</label>
-        <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
-      </div>
-      <div class="row row-inline">
-        <label style="margin:0">Practice Areas</label>
-        <button id="clear-cats" class="btn-clear" type="button">Clear filters</button>
-      </div>
-      <div id="category-filters" class="chips"></div>
-      <div class="row">
-        <label>Sort by</label>
-        <select id="sort">
-          <option value="name">Name (A→Z)</option>
-          <option value="primary">Main Practice Area (A→Z)</option>
-          <option value="category">Practice Areas (A→Z)</option>
-        </select>
-      </div>
-    </div>
-    <div class="legend">
-      <div class="legend-header"><span>Partners</span></div>
-      <div id="list" class="legend-list" role="listbox" aria-label="Partner list"></div>
-    </div>
-  </aside>
-
   <main class="stage">
+    <!-- Top row: Partners (left) and Filters (right) -->
+    <div class="top-panels">
+      <!-- Partners panel (legend) - top-left -->
+      <div class="legend">
+        <div class="legend-header"><span>Partners</span></div>
+        <div id="list" class="legend-list" role="listbox" aria-label="Partner list"></div>
+      </div>
+
+      <!-- Filters panel - top-right -->
+      <div class="controls">
+        <div class="row">
+          <label>Search</label>
+          <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
+        </div>
+        <div class="row row-inline">
+          <label style="margin:0">Practice Areas</label>
+          <button id="clear-cats" class="btn-clear" type="button">Clear filters</button>
+        </div>
+        <div id="category-filters" class="chips"></div>
+        <div class="row">
+          <label>Sort by</label>
+          <select id="sort">
+            <option value="name">Name (A→Z)</option>
+            <option value="primary">Main Practice Area (A→Z)</option>
+            <option value="category">Practice Areas (A→Z)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description panel -->
     <section id="detail" class="detail" aria-live="polite" aria-atomic="true">
       <div class="empty">Select a partner from the list of names to find out more!</div>
     </section>
+
+    <!-- Map fills the rest of the iframe height -->
     <div id="map"></div>
   </main>
 </div>
@@ -504,7 +517,6 @@ body{
     download:true,header:true,skipEmptyLines:true,
     complete:res=>{
       const fields = (res.meta && res.meta.fields) || [];
-      // build header map for flexible column names
       buildHeaderMap(fields);
 
       data=res.data.map((r,idx)=>{
