@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Partners Map</title>
 
-<!-- Inter Tight font -->
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
 
@@ -31,57 +30,58 @@
 
   .legend{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:auto;min-height:50vh}
   .legend-header{padding:10px 12px;font-weight:700;border-bottom:1px solid #f3f4f6}
-  .legend-list .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer}
+  .legend-list .item{padding:10px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer}
   .legend-list .item:last-child{border-bottom:none}
   .legend-list h4{margin:0;font-size:14px;line-height:1.25}
   .legend-list .meta{font-size:12px;color:#6b7280}
   .legend-list .item.active{background:#eef2ff}
 
-  .stage{display:grid;grid-template-rows:minmax(460px,60vh) auto;gap:12px}
-  #map{
+  #map{border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;height:100%}
+
+  /* floating detail panel */
+  .detail{
+    position:absolute;
+    top:20px; right:20px;
+    width:320px;
+    max-height:60%;
+    overflow:auto;
+    background:#fff;
     border:1px solid #e5e7eb;
     border-radius:14px;
-    overflow:hidden;   /* contain tiles & popups inside the rounded box */
-    height:100%;
+    padding:14px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    z-index:1000;
   }
-  .detail{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px;position:relative}
   .detail h2{margin:0 0 6px 0;font-size:17px}
   .detail .kv{font-size:13px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .kv b{display:inline;font-weight:700;margin-right:0;padding-right:0}
-  .kv a{text-decoration:underline}
-  .section-title{margin-top:10px;font-weight:700;font-size:13px}
   .pill{display:inline-block;background:#111827;color:#fff;border-radius:999px;padding:2px 8px;font-size:11px;margin:2px 4px 0 0}
-  .detail-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+  .detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
   .detail-close{border:none;background:#f3f4f6;border-radius:10px;font-size:18px;line-height:1;padding:4px 10px;cursor:pointer}
   .detail-close:hover{background:#e5e7eb}
 
-  /* popup styling */
   .leaflet-container .leaflet-popup-content{font-family:"Inter Tight",system-ui,sans-serif;font-size:13px}
   .leaflet-container .leaflet-popup-content-wrapper{border-radius:10px}
   .leaflet-container .leaflet-popup-tip{opacity:.95}
 
   @media (max-width:720px){
     .layout{grid-template-columns:1fr}
-    .stage{grid-template-rows:360px auto}
+    .detail{width:90%; right:5%; top:10px}
   }
 </style>
 </head>
 <body>
-<div id="map-app" class="layout">
+<div class="layout">
   <aside class="sidebar">
     <div class="controls">
       <div class="row">
         <label>Search</label>
-        <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
+        <input id="search" type="text" placeholder="Search partners…"/>
       </div>
-
       <div class="row row-inline">
         <label style="margin:0">Practice Areas</label>
-        <button id="clear-cats" class="btn-clear" type="button" aria-label="Clear practice area filters">Clear filters</button>
+        <button id="clear-cats" class="btn-clear" type="button">Clear filters</button>
       </div>
       <div id="category-filters" class="chips"></div>
-
       <div class="row">
         <label>Sort by</label>
         <select id="sort">
@@ -91,255 +91,111 @@
         </select>
       </div>
     </div>
-
     <div class="legend">
       <div class="legend-header"><span>Partners</span></div>
-      <div id="list" class="legend-list" role="listbox" aria-label="Partner list"></div>
+      <div id="list" class="legend-list"></div>
     </div>
   </aside>
 
-  <main class="stage">
+  <main style="position:relative">
     <div id="map"></div>
-    <section id="detail" class="detail" aria-live="polite" aria-atomic="true">
-      <div class="empty" style="color:#6b7280">Select a partner from the list or map to see details.</div>
+    <section id="detail" class="detail">
+      <div class="empty" style="color:#6b7280">Select a partner from the list or map…</div>
     </section>
   </main>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script>
-(function(){
-  const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR1A8WkC-BbA94Ipm6Sit3qx5ndFoTG-zBBqnZPkNDEvHa11O0BJTRCWepWyo6RhqH58ZK1kQXO9v6P/pub?gid=1272818494&single=true&output=csv';
-  const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
-  const ATTRIB = '&copy; OpenStreetMap &copy; CARTO';
-  const MARKER_STYLE = { radius:6, weight:1.5, color:'var(--hotpink-border)', fillColor:'var(--hotpink)', fillOpacity:0.9 };
+// CSV URL
+const CSV_URL='YOUR_CSV_LINK_HERE';
 
-  /* UPDATED aliases to match your exact headers, including "Main Practice areas" */
-  const FIELD_ALIASES = {
-    name: ['_Name','Name'],
-    address: ['_Address','Address'],
-    lat: ['_Latitude','Latitude'],
-    lng: ['_Longitude','Longitude'],
+// simplified aliases for demo
+const FIELD_ALIASES={
+  name:['Name','_Name'],
+  address:['Address','_Address'],
+  lat:['Latitude','_Latitude'],
+  lng:['Longitude','_Longitude'],
+  website:['Website','_Website'],
+  description:['Description','_Description'],
+  category:['Category','_Category','Main Practice areas','Main Practice Areas'],
+  primary:['PrimaryCategory','_PrimaryCategory'],
+  intake:['Intake','_Intake'],
+  geoElig:['Geographic Eligibility','_GeographicEligibility'],
+  finElig:['Financial Eligibility','_FinancialEligibility']
+};
 
-    website: ['_Website','Website'],
-    description: ['_Description','Description'],
+let data=[],filtered=[],activeId=null;
+const els={
+  list:document.getElementById('list'),
+  detail:document.getElementById('detail')
+};
 
-    // categories: accept underscore, plain, and "Main Practice areas"
-    category: ['_Category','Category','Main Practice areas'],
+const map=L.map('map').setView([41.88,-87.63],11);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{
+  maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'
+}).addTo(map);
+const layerGroup=L.layerGroup().addTo(map);
+const markers=[];
 
-    // optional single primary
-    primary: ['_PrimaryCategory','PrimaryCategory'],
+function pick(row,keys){for(const k of keys){if(row[k])return row[k];}return'';}
 
-    intake: ['_Intake','Intake'],
-    geoElig: ['_GeographicEligibility','Geographic Eligibility'],
-    finElig: ['_FinancialEligibility','Financial Eligibility'],
+function popupHTML(r){
+  const name=pick(r,FIELD_ALIASES.name);
+  const addr=pick(r,FIELD_ALIASES.address);
+  const site=pick(r,FIELD_ALIASES.website);
+  return `<div style="font-family:'Inter Tight'"><b>${name}</b><br>${addr}<br>${site?`<a href="${site}" target="_blank">website</a>`:''}</div>`;
+}
 
-    country: ['Country']
-  };
+function renderDetail(r){
+  if(!r){els.detail.innerHTML='<div class="empty">Select a partner…</div>';return;}
+  const name=pick(r,FIELD_ALIASES.name);
+  const addr=pick(r,FIELD_ALIASES.address);
+  const site=pick(r,FIELD_ALIASES.website);
+  const desc=pick(r,FIELD_ALIASES.description);
+  els.detail.innerHTML=`
+    <div class="detail-header"><h2>${name}</h2><button class="detail-close" onclick="els.detail.innerHTML='<div class=empty>Select a partner…</div>'">×</button></div>
+    ${addr?`<div class="kv"><b>Address:</b> ${addr}</div>`:''}
+    ${site?`<div class="kv"><b>Website:</b> <a href="${site}" target="_blank">${site}</a></div>`:''}
+    ${desc?`<div class="section-title">About</div><div>${desc}</div>`:''}
+  `;
+}
 
-  const HIDE_FROM_OTHER = new Set([
-    ...FIELD_ALIASES.name, ...FIELD_ALIASES.address, ...FIELD_ALIASES.lat, ...FIELD_ALIASES.lng,
-    ...FIELD_ALIASES.website, ...FIELD_ALIASES.description,
-    ...FIELD_ALIASES.category, ...FIELD_ALIASES.primary, ...FIELD_ALIASES.intake,
-    ...FIELD_ALIASES.geoElig, ...FIELD_ALIASES.finElig, ...FIELD_ALIASES.country,
-    'City','State','STATE','Zip','Zip Code','Postal Code','Province'
-  ]);
+function selectById(id){
+  activeId=id;
+  const r=filtered.find(x=>x.__id===id);
+  renderDetail(r);
+}
 
-  const els = {
-    search: document.getElementById('search'),
-    sort: document.getElementById('sort'),
-    cats: document.getElementById('category-filters'),
-    clearCats: document.getElementById('clear-cats'),
-    list: document.getElementById('list'),
-    detail: document.getElementById('detail')
-  };
-
-  const slug = s => (s||'').toString().toLowerCase();
-  const splitCats = s => (s||'').split(',').map(v=>v.trim()).filter(Boolean);
-  function pick(row, keys){
-    for (const k of keys){ if (row[k] !== undefined && String(row[k]).trim() !== '') return String(row[k]).trim(); }
-    return '';
-  }
-
-  let data = [], filtered = [], practiceAreas = new Set(), headers = [];
-  let activeId = null, currentBounds = null;
-  const map = L.map('map', { zoomControl: true, attributionControl: true });
-  L.tileLayer(TILE_URL, { maxZoom: 19, attribution: ATTRIB }).addTo(map);
-  const layerGroup = L.layerGroup().addTo(map);
-  const markers = [];
-
-  function boundsFromRows(rows){
-    const b = L.latLngBounds([]);
-    rows.forEach(r=>{
-      const lat = parseFloat(pick(r, FIELD_ALIASES.lat));
-      const lng = parseFloat(pick(r, FIELD_ALIASES.lng));
-      if(!isNaN(lat)&&!isNaN(lng)) b.extend([lat,lng]);
-    });
-    return b.isValid()? b : L.latLngBounds([[41.85,-87.75],[42.05,-87.55]]);
-  }
-
-  function renderCategories(){
-    els.cats.innerHTML = '';
-    Array.from(practiceAreas).sort((a,b)=>a.localeCompare(b)).forEach(cat=>{
-      const span = document.createElement('span');
-      span.className = 'chip';   // start cleared
-      span.textContent = cat; span.dataset.value = cat;
-      span.onclick = ()=>{ span.classList.toggle('active'); applyFilters(); };
-      els.cats.appendChild(span);
-    });
-  }
-
-  function clearCategoryFilters(){
-    els.cats.querySelectorAll('.chip.active').forEach(ch => ch.classList.remove('active'));
-    applyFilters();
-  }
-
-  function popupHTML(row){
-    const name = pick(row, FIELD_ALIASES.name);
-    const addr = pick(row, FIELD_ALIASES.address);
-    const site = pick(row, FIELD_ALIASES.website);
-    const cats = splitCats(pick(row, FIELD_ALIASES.category));
-    const addrHtml = addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>` : '';
-    return `<div style="font-family:'Inter Tight';font-size:13px">
-      <div style="font-weight:600">${name}</div>
-      ${addrHtml? `<div>${addrHtml}</div>`:''}
-      ${cats.length? `<div style="color:#6b7280;font-size:12px">${cats.join(', ')}</div>`:''}
-      ${site? `<a href="${site}" target="_blank" rel="noopener">website</a>`:''}
-    </div>`;
-  }
-
-  function renderMarkers(rows){
-    layerGroup.clearLayers(); markers.length = 0;
-    rows.forEach(r=>{
-      const lat = parseFloat(pick(r, FIELD_ALIASES.lat));
-      const lng = parseFloat(pick(r, FIELD_ALIASES.lng));
-      if(isNaN(lat)||isNaN(lng)) return;
-      const m = L.circleMarker([lat,lng], MARKER_STYLE);
-      m.__id = r.__id;
-      m.bindPopup(popupHTML(r), { maxWidth:280 });
-      m.on('click', ()=>{ selectById(r.__id,true); m.openPopup(); });
-      markers.push(m); layerGroup.addLayer(m);
-    });
-    currentBounds = boundsFromRows(rows);
-    map.fitBounds(currentBounds,{padding:[20,20]});
-  }
-
-  function renderList(rows){
-    els.list.innerHTML = rows.map(r=>{
-      const id = r.__id, name=pick(r,FIELD_ALIASES.name);
-      const primary = pick(r, FIELD_ALIASES.primary) || (splitCats(pick(r, FIELD_ALIASES.category))[0] || '');
-      return `<div class="item${activeId===id?' active':''}" data-id="${id}">
-        <div><h4>${name}</h4><div class="meta">${primary||''}</div></div></div>`;
-    }).join('');
-    els.list.querySelectorAll('.item').forEach(el=>{
-      el.addEventListener('click', ()=>{
-        const id = Number(el.dataset.id);
-        selectById(id,true);
-        const m = markers.find(mm=>mm.__id===id);
-        if(m){ map.once('moveend',()=>m.openPopup()); m.openPopup(); }
-      });
-    });
-  }
-
-  function renderDetail(row){
-    if(!row){ els.detail.innerHTML='<div class="empty" style="color:#6b7280">Select a partner...</div>'; return; }
-    const name = pick(row,FIELD_ALIASES.name);
-    const addr = pick(row,FIELD_ALIASES.address);
-    const site = pick(row,FIELD_ALIASES.website);
-    const desc = pick(row,FIELD_ALIASES.description);
-    const cats = splitCats(pick(row,FIELD_ALIASES.category));
-    const primary = pick(row,FIELD_ALIASES.primary) || (cats[0]||'');
-    const intake = pick(row,FIELD_ALIASES.intake);
-    const geo = pick(row,FIELD_ALIASES.geoElig);
-    const fin = pick(row,FIELD_ALIASES.finElig);
-
-    const addrHtml = addr ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>` : '';
-
-    const other = []; // keep “Other details” minimal; headers come from CSV
-    els.detail.innerHTML = `
-      <div class="detail-header">
-        <h2>${name}</h2>
-        <button class="detail-close" id="detail-close" aria-label="Close">×</button>
-      </div>
-      ${primary ? `<div class="kv"><b>Main Practice Area:</b>${primary}</div>` : ''}
-      ${cats.length? `<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
-      <div class="grid">
-        ${addrHtml? `<div class="kv"><b>Address:</b>${addrHtml}</div>`:''}
-        ${site? `<div class="kv"><b>Website:</b><a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
-      </div>
-      ${desc? `<div class="section-title">About</div><div>${desc}</div>`:''}
-      ${intake? `<div class="section-title">Intake</div><div>${intake}</div>`:''}
-      ${geo? `<div class="section-title">Geographic Eligibility</div><div>${geo}</div>`:''}
-      ${fin? `<div class="section-title">Financial Eligibility</div><div>${fin}</div>`:''}
-      ${other.length? `<div class="section-title">Other details</div>${other.join('')}`:''}
-    `;
-    document.getElementById('detail-close').onclick=()=>{
-      activeId=null;
-      els.detail.innerHTML='<div class="empty" style="color:#6b7280">Select a partner...</div>';
-      markers.forEach(m=>m.closePopup());
-      if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
-    };
-  }
-
-  function selectById(id,moveMap){
-    activeId=id;
-    const row=filtered.find(r=>r.__id===id); if(!row) return;
-    renderDetail(row);
-    if(moveMap){
-      const lat=parseFloat(pick(row,FIELD_ALIASES.lat));
-      const lng=parseFloat(pick(row,FIELD_ALIASES.lng));
-      if(!isNaN(lat)&&!isNaN(lng)) map.setView([lat,lng],14,{animate:true,duration:0.35});
-    }
-  }
-
-  function applyFilters(){
-    const q=slug(els.search.value);
-    const activeCats=Array.from(els.cats.querySelectorAll('.chip.active')).map(x=>x.dataset.value);
-    filtered=data.filter(r=>{
-      const cats=splitCats(pick(r,FIELD_ALIASES.category));
-      const inCat=activeCats.length?cats.some(c=>activeCats.includes(c)):true;
-      const hay=slug([pick(r,FIELD_ALIASES.name),pick(r,FIELD_ALIASES.address),pick(r,FIELD_ALIASES.category),pick(r,FIELD_ALIASES.description)].join(' '));
-      return inCat && (q?hay.includes(q):true);
-    });
-    // sort
-    const sortBy = els.sort.value;
-    filtered.sort((a,b)=>{
-      if(sortBy==='primary'){
-        const pa = pick(a,FIELD_ALIASES.primary) || (splitCats(pick(a,FIELD_ALIASES.category))[0]||'');
-        const pb = pick(b,FIELD_ALIASES.primary) || (splitCats(pick(b,FIELD_ALIASES.category))[0]||'');
-        return slug(pa).localeCompare(slug(pb));
-      }
-      if(sortBy==='category'){
-        return slug(pick(a,FIELD_ALIASES.category)).localeCompare(slug(pick(b,FIELD_ALIASES.category)));
-      }
-      return slug(pick(a,FIELD_ALIASES.name)).localeCompare(slug(pick(b,FIELD_ALIASES.name)));
-    });
-
-    renderMarkers(filtered); renderList(filtered);
-  }
-
-  Papa.parse(CSV_URL,{
-    download:true,header:true,skipEmptyLines:true,
-    complete:function(results){
-      headers=results.meta.fields||[];
-      data=results.data.map((r,i)=>{
-        const cats=splitCats(pick(r,FIELD_ALIASES.category));
-        cats.forEach(c=>practiceAreas.add(c));
-        // keep original row plus internal id
-        return {...r,__id:i+1};
-      });
-      renderCategories(); applyFilters();
-      els.search.addEventListener('input',applyFilters);
-      els.sort.addEventListener('change',applyFilters);
-      els.clearCats.addEventListener('click', clearCategoryFilters);
-    },
-    error:function(err){
-      console.error('CSV load error', err);
-      els.detail.innerHTML = '<div style="color:#b91c1c">CSV could not be loaded. Check the Publish-to-web link and that the tab (gid) is correct.</div>';
-    }
+function renderMarkers(rows){
+  layerGroup.clearLayers();markers.length=0;
+  rows.forEach(r=>{
+    const lat=parseFloat(pick(r,FIELD_ALIASES.lat));
+    const lng=parseFloat(pick(r,FIELD_ALIASES.lng));
+    if(isNaN(lat)||isNaN(lng))return;
+    const m=L.circleMarker([lat,lng],{radius:6,color:'var(--hotpink-border)',fillColor:'var(--hotpink)',fillOpacity:.9});
+    m.__id=r.__id;
+    m.bindPopup(popupHTML(r));
+    m.on('click',()=>{selectById(r.__id);m.openPopup();});
+    layerGroup.addLayer(m);markers.push(m);
   });
-})();
+  if(rows.length){map.fitBounds(layerGroup.getBounds(),{padding:[20,20]});}
+}
+
+function renderList(rows){
+  els.list.innerHTML=rows.map(r=>`<div class="item" onclick="selectById(${r.__id})"><h4>${pick(r,FIELD_ALIASES.name)}</h4></div>`).join('');
+}
+
+// Load CSV
+Papa.parse(CSV_URL,{
+  download:true,header:true,complete:function(res){
+    data=res.data.map((r,i)=>({...r,__id:i+1}));
+    filtered=data;
+    renderMarkers(filtered);
+    renderList(filtered);
+  }
+});
 </script>
 </body>
 </html>
