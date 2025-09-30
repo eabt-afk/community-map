@@ -22,13 +22,26 @@ body{
   font-size:14px;
 }
 
-.layout{
+.layout {
   display:grid;
-  grid-template-columns:380px 1fr;
+  grid-template-columns:440px 1fr; /* wider sidebar on desktop */
   gap:16px;
   min-height:100vh;
   padding:16px;
   box-sizing:border-box;
+}
+
+/* Responsive: shrink sidebar for smaller screens */
+@media (max-width:1200px){
+  .layout {
+    grid-template-columns:420px 1fr; /* back to default width */
+  }
+}
+
+@media (max-width:900px){
+  .layout {
+    grid-template-columns:1fr; /* stack sidebar above map */
+  }
 }
 
 /* Sidebar panels (filters + legend) WHITE */
