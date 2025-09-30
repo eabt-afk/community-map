@@ -50,7 +50,7 @@ body{
 /* Top row with two panels (Partners left, Filters right) */
 .top-panels {
   display:grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(260px, 35%) minmax(360px, 65%); /* narrower Partners, wider Filters */
   gap:16px;
 }
 
