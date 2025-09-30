@@ -15,6 +15,7 @@
   --hotpink-border: hsla(323, 98%, 35%, 1);
 }
 
+/* Global */
 body{
   margin:0;
   font-family:"Raleway",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
@@ -31,7 +32,7 @@ body{
   box-sizing:border-box;
 }
 
-/* Sidebar panels (filters + legend) now white */
+/* Sidebar panels (filters + legend) WHITE */
 .controls, .legend {
   background:#fff;
   border:1px solid #e5e7eb;
@@ -47,6 +48,8 @@ body{
   color:#111;
   font-weight:700;
 }
+
+.row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px}
 
 /* Search input */
 #search {
@@ -92,7 +95,7 @@ body{
   background:#f3f4f6;
 }
 
-/* Legend */
+/* Legend panel (WHITE) */
 .legend{
   background:#fff;
   border:1px solid #e5e7eb;
@@ -131,7 +134,7 @@ body{
   font-family:"Raleway",sans-serif;
 }
 
-/* Right column */
+/* Right column: detail ABOVE map */
 .stage{
   display:grid;
   grid-template-rows:auto minmax(460px,60vh);
@@ -139,15 +142,21 @@ body{
   align-content:start;
 }
 
-/* Map */
+/* Map box (remains white card edge) */
 #map{
   border:1px solid #e5e7eb;
   border-radius:14px;
   overflow:hidden;
   height:100%;
+  background:#fff; /* so bounds flash isn’t black */
 }
 
-/* Description panel */
+/* *** Black & white (grayscale) map overlay *** */
+#map .leaflet-tile {
+  filter: grayscale(100%) saturate(0) contrast(1.05);
+}
+
+/* Detail panel (WHITE) */
 .detail{
   background:#fff;
   border:1px solid #e5e7eb;
@@ -155,6 +164,7 @@ body{
   padding:14px;
   position:relative;
   font-family:"Raleway",sans-serif;
+  color:#111;
 }
 .detail h2{margin:0 0 6px 0;font-size:17px;color:#111}
 .detail .kv{font-size:13px}
@@ -237,10 +247,13 @@ body{
 
   let data=[],filtered=[],activeId=null,currentBounds=null;
   const practiceAreas=new Set();
-  const map=L.map('map');L.tileLayer(TILE_URL,{maxZoom:19,attribution:ATTRIB}).addTo(map);
-  const layerGroup=L.layerGroup().addTo(map);const markers=[];
 
-  function pick(r,keys){for(const k of keys){if(r[k])return r[k];}return'';}
+  const map=L.map('map',{zoomControl:true,attributionControl:true});
+  L.tileLayer(TILE_URL,{maxZoom:19,attribution:ATTRIB}).addTo(map);
+  const layerGroup=L.layerGroup().addTo(map);
+  const markers=[];
+
+  function pick(r,keys){for(const k of keys){if(r[k]!==undefined&&String(r[k]).trim()!=='')return String(r[k]).trim();}return'';}
   function splitCats(s){return(s||'').split(/[,;]/).map(v=>v.trim()).filter(Boolean);}
 
   function popupHTML(r){
@@ -248,13 +261,39 @@ body{
     const addr=pick(r,FIELD_ALIASES.address);
     const site=pick(r,FIELD_ALIASES.website);
     const cats=splitCats(pick(r,FIELD_ALIASES.category));
-    const addrHtml=addr?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank">${addr}</a>`:'';
+    const addrHtml=addr?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`:'';
     return `<div style="font-family:'Raleway';font-size:13px">
       <div style="font-weight:600">${name}</div>
       ${addrHtml?`<div>${addrHtml}</div>`:''}
       ${cats.length?`<div style="color:#6b7280;font-size:12px">${cats.join(', ')}</div>`:''}
-      ${site?`<a href="${site}" target="_blank">website</a>`:''}
+      ${site?`<a href="${site}" target="_blank" rel="noopener">website</a>`:''}
     </div>`;
+  }
+
+  function boundsFromRows(rows){
+    const b=L.latLngBounds([]);
+    rows.forEach(r=>{
+      const lat=parseFloat(pick(r,FIELD_ALIASES.lat));
+      const lng=parseFloat(pick(r,FIELD_ALIASES.lng));
+      if(!isNaN(lat)&&!isNaN(lng)) b.extend([lat,lng]);
+    });
+    return b.isValid()? b : L.latLngBounds([[41.85,-87.75],[42.05,-87.55]]);
+  }
+
+  function renderCategories(){
+    els.cats.innerHTML='';
+    Array.from(practiceAreas).sort((a,b)=>a.localeCompare(b)).forEach(cat=>{
+      const span=document.createElement('span');
+      span.className='chip'; // start cleared
+      span.textContent=cat; span.dataset.value=cat;
+      span.onclick=()=>{span.classList.toggle('active');applyFilters();};
+      els.cats.appendChild(span);
+    });
+  }
+
+  function clearCategoryFilters(){
+    els.cats.querySelectorAll('.chip.active').forEach(ch=>ch.classList.remove('active'));
+    applyFilters();
   }
 
   function renderMarkers(rows){
@@ -264,68 +303,170 @@ body{
       const lng=parseFloat(pick(r,FIELD_ALIASES.lng));
       if(isNaN(lat)||isNaN(lng))return;
       const m=L.circleMarker([lat,lng],MARKER_STYLE);
-      m.__id=r.__id;m.bindPopup(popupHTML(r),{maxWidth:300});
-      m.on('click',()=>{selectById(r.__id,true);m.openPopup();});
+      m.__id=r.__id;
+      m.bindPopup(popupHTML(r),{maxWidth:300,autoPan:true,autoPanPadding:[30,30]});
+      m.on('click',()=>{selectById(r.__id,true);map.once('moveend',()=>m.openPopup());m.openPopup();});
       markers.push(m);layerGroup.addLayer(m);
     });
-    if(rows.length){currentBounds=layerGroup.getBounds();map.fitBounds(currentBounds,{padding:[20,20]});}
+    currentBounds=boundsFromRows(rows);
+    map.fitBounds(currentBounds,{padding:[20,20]});
   }
 
   function renderList(rows){
     els.list.innerHTML=rows.map(r=>{
       const id=r.__id;const name=pick(r,FIELD_ALIASES.name)||'Untitled';
-      return `<div class="item${activeId===id?' active':''}" data-id="${id}"><h4>${name}</h4></div>`;
+      const primary=pick(r,FIELD_ALIASES.primary)||(splitCats(pick(r,FIELD_ALIASES.category))[0]||'');
+      return `<div class="item${activeId===id?' active':''}" data-id="${id}" role="option" tabindex="0">
+        <h4>${name}</h4>
+        <div class="meta">${primary||''}</div>
+      </div>`;
     }).join('');
     els.list.querySelectorAll('.item').forEach(el=>{
       el.addEventListener('click',()=>{
-        const id=Number(el.dataset.id);selectById(id,true);
-        const m=markers.find(mm=>mm.__id===id);if(m){m.openPopup();}
+        const id=Number(el.dataset.id);
+        selectById(id,true);
+        const m=markers.find(mm=>mm.__id===id);
+        if(m){map.once('moveend',()=>m.openPopup());m.openPopup();}
+      });
+      el.addEventListener('keydown',e=>{
+        if(e.key==='Enter'||e.key===' '){
+          e.preventDefault();
+          const id=Number(el.dataset.id);
+          selectById(id,true);
+          const m=markers.find(mm=>mm.__id===id);
+          if(m){map.once('moveend',()=>m.openPopup());m.openPopup();}
+        }
       });
     });
   }
 
   function renderDetail(r){
-    if(!r){els.detail.innerHTML='<div class="empty">Select a partner from the list of names to find out more!</div>';return;}
+    if(!r){
+      els.detail.innerHTML='<div class="empty">Select a partner from the list of names to find out more!</div>';
+      return;
+    }
     const name=pick(r,FIELD_ALIASES.name)||'Untitled';
     const addr=pick(r,FIELD_ALIASES.address);
     const site=pick(r,FIELD_ALIASES.website);
     const desc=pick(r,FIELD_ALIASES.description);
     const cats=splitCats(pick(r,FIELD_ALIASES.category));
-    const primary=pick(r,FIELD_ALIASES.primary)||cats[0]||'';
+    const primary=pick(r,FIELD_ALIASES.primary)||(cats[0]||'');
     const intake=pick(r,FIELD_ALIASES.intake);
     const geo=pick(r,FIELD_ALIASES.geoElig);
     const fin=pick(r,FIELD_ALIASES.finElig);
-    const addrHtml=addr?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank">${addr}</a>`:'';
+    const addrHtml=addr?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`:'';
+
     els.detail.innerHTML=`
-      <div class="detail-header"><h2>${name}</h2>
-        <button class="detail-close" onclick="(${()=>renderDetail(null)})()">×</button>
+      <div class="detail-header">
+        <h2>${name}</h2>
+        <button class="detail-close" id="detail-close" aria-label="Close">×</button>
       </div>
       ${primary?`<div class="kv"><b>Main Practice Area:</b> ${primary}</div>`:''}
       ${cats.length?`<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
+
       ${addrHtml?`<div class="kv"><b>Address:</b> ${addrHtml}</div>`:''}
-      ${site?`<div class="kv"><b>Website:</b> <a href="${site}" target="_blank">${site}</a></div>`:''}
+      ${site?`<div class="kv"><b>Website:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
+
       ${desc?`<div class="section-title">About</div><div>${desc}</div>`:''}
       ${intake?`<div class="section-title">Intake</div><div>${intake}</div>`:''}
       ${geo?`<div class="section-title">Geographic Eligibility</div><div>${geo}</div>`:''}
       ${fin?`<div class="section-title">Financial Eligibility</div><div>${fin}</div>`:''}
     `;
-  }
 
-  function selectById(id,moveMap){
-    activeId=id;const row=filtered.find(r=>r.__id===id);if(!row)return;
-    renderDetail(row);
-    els.list.querySelectorAll('.item').forEach(el=>el.classList.toggle('active',Number(el.dataset.id)===id));
-    if(moveMap){
-      const lat=parseFloat(pick(row,FIELD_ALIASES.lat));const lng=parseFloat(pick(row,FIELD_ALIASES.lng));
-      if(!isNaN(lat)&&!isNaN(lng)){map.setView([lat,lng],14);}
+    const closeBtn=document.getElementById('detail-close');
+    if(closeBtn){
+      closeBtn.addEventListener('click',()=>{
+        activeId=null;
+        els.detail.innerHTML='<div class="empty">Select a partner from the list of names to find out more!</div>';
+        markers.forEach(m=>m.closePopup());
+        if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
+        els.list.querySelectorAll('.item').forEach(el=>el.classList.remove('active'));
+      });
     }
   }
 
-  Papa.parse(CSV_URL,{download:true,header:true,skipEmptyLines:true,
+  function selectById(id,moveMap){
+    activeId=id;
+    const row=filtered.find(r=>r.__id===activeId);
+    if(!row) return;
+    renderDetail(row);
+    // highlight list
+    els.list.querySelectorAll('.item').forEach(el=>el.classList.toggle('active', Number(el.dataset.id)===activeId));
+    if(moveMap){
+      const lat=parseFloat(pick(row,FIELD_ALIASES.lat));
+      const lng=parseFloat(pick(row,FIELD_ALIASES.lng));
+      if(!isNaN(lat)&&!isNaN(lng)){
+        map.setView([lat,lng], Math.max(map.getZoom(), 14), {animate:true, duration:0.35});
+      }
+    }
+  }
+
+  function applyFilters(){
+    const q=(els.search.value||'').toLowerCase();
+    const activeCats=Array.from(els.cats.querySelectorAll('.chip.active')).map(x=>x.dataset.value);
+    const sortBy=els.sort.value;
+
+    filtered=data.filter(r=>{
+      const cats=splitCats(pick(r,FIELD_ALIASES.category));
+      const inCat=activeCats.length?cats.some(c=>activeCats.includes(c)):true;
+      const hay=[
+        pick(r,FIELD_ALIASES.name),
+        pick(r,FIELD_ALIASES.address),
+        pick(r,FIELD_ALIASES.description),
+        pick(r,FIELD_ALIASES.category),
+        pick(r,FIELD_ALIASES.intake),
+        pick(r,FIELD_ALIASES.geoElig),
+        pick(r,FIELD_ALIASES.finElig)
+      ].filter(Boolean).join(' ').toLowerCase();
+      const inSearch=q?hay.includes(q):true;
+      return inCat && inSearch;
+    });
+
+    filtered.sort((a,b)=>{
+      if(sortBy==='primary'){
+        const pa=pick(a,FIELD_ALIASES.primary)||(splitCats(pick(a,FIELD_ALIASES.category))[0]||'');
+        const pb=pick(b,FIELD_ALIASES.primary)||(splitCats(pick(b,FIELD_ALIASES.category))[0]||'');
+        return pa.localeCompare(pb);
+      }
+      if(sortBy==='category'){
+        return pick(a,FIELD_ALIASES.category).localeCompare(pick(b,FIELD_ALIASES.category));
+      }
+      return pick(a,FIELD_ALIASES.name).localeCompare(pick(b,FIELD_ALIASES.name));
+    });
+
+    renderMarkers(filtered);
+    renderList(filtered);
+
+    if(!filtered.find(r=>r.__id===activeId)){
+      activeId=null;
+      renderDetail(null);
+      els.list.querySelectorAll('.item').forEach(el=>el.classList.remove('active'));
+    }
+  }
+
+  // Load CSV
+  Papa.parse(CSV_URL,{
+    download:true,header:true,skipEmptyLines:true,
     complete:res=>{
-      data=res.data.map((r,i)=>({...r,__id:i+1}));filtered=data;
-      renderMarkers(filtered);renderList(filtered);
-    }});
+      data=res.data.map((r,idx)=>{
+        const cats=splitCats(pick(r,FIELD_ALIASES.category));
+        cats.forEach(c=>practiceAreas.add(c));
+        return Object.assign({},r,{__id:idx+1});
+      });
+      // build chips + render
+      renderCategories();
+      applyFilters();
+
+      // listeners
+      els.search.addEventListener('input',applyFilters);
+      els.sort.addEventListener('change',applyFilters);
+      els.clearCats.addEventListener('click',clearCategoryFilters);
+    },
+    error:err=>{
+      console.error('CSV load error',err);
+      els.detail.innerHTML='<div style="color:#b91c1c">CSV could not be loaded. Make sure the Google Sheet is “Published to the web”.</div>';
+    }
+  });
 })();
 </script>
 </body>
