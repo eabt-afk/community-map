@@ -15,46 +15,46 @@
   --hotpink-border: hsla(323, 98%, 35%, 1);
 }
 
-/* Make the document fill the iframe height */
+/* Fill iframe height */
 html, body { height: 100%; }
 
 body{
   margin:0;
   font-family:"Raleway",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  background:#000; /* whole background black */
+  background:#000;
   font-size:14px;
-  min-height:100vh; /* fill the iframe */
+  min-height:100vh;
   box-sizing:border-box;
 }
 
-/* Single-column page; the map column fills remaining height */
+/* Page layout */
 .layout {
   display:grid;
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
-  min-height:100vh;   /* full iframe height */
+  min-height:100vh;
   padding:16px;
   gap:16px;
   box-sizing:border-box;
 }
 
-/* Top row with two panels: left=Partners (legend), right=Filters (controls) */
+/* Stage stacks: top-panels then map fills */
+.stage {
+  display:grid;
+  grid-template-rows: auto 1fr;  /* top panels auto, map fills */
+  gap:12px;
+  height:100%;
+  min-height:0;
+}
+
+/* Top row with two panels (Partners left, Filters right) */
 .top-panels {
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap:16px;
 }
 
-/* The main stage stacks: top-panels, then detail, then map fills rest */
-.stage {
-  display:grid;
-  grid-template-rows: auto auto 1fr; /* panels (auto), detail (auto), map (fills) */
-  gap:12px;
-  min-height:0; /* allow map to grow */
-  height:100%;
-}
-
-/* Panels (filters + legend) - white cards */
+/* Panels style */
 .controls, .legend {
   background:#fff;
   border:1px solid #e5e7eb;
@@ -64,7 +64,7 @@ body{
   box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
 
-/* Headers: hot pink */
+/* Headers hot pink */
 .controls label,
 .legend-header {
   color: var(--hotpink);
@@ -73,10 +73,9 @@ body{
   line-height: 1.2;
 }
 
-/* Row spacing inside the filters panel */
+/* Filters spacing */
 .controls .row { margin-bottom: 16px; }
 .controls .row:last-child { margin-bottom: 0; }
-
 .row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px}
 
 /* Search input */
@@ -90,7 +89,7 @@ body{
   font-family:"Raleway",sans-serif;
 }
 
-/* Chips (practice areas): hot pink bg, white text; invert on active */
+/* Practice area chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip {
   border: 1px solid var(--hotpink-border);
@@ -108,10 +107,9 @@ body{
   color: var(--hotpink);
   font-weight: 600;
 }
-/* extra breathing room beneath chips before Sort By */
 #category-filters { margin-bottom: 16px; }
 
-/* Clear button (outlined hot pink) */
+/* Clear button */
 .btn-clear {
   border: 1px solid var(--hotpink);
   background: #fff;
@@ -124,14 +122,14 @@ body{
 }
 .btn-clear:hover { background:#f3f4f6; }
 
-/* Legend */
+/* Legend (Partners) */
 .legend{
   background:#fff;
   border:1px solid #e5e7eb;
   border-radius:14px;
   overflow:auto;
   color:#111;
-  max-height: 45vh; /* keep it reasonable so the map gets space */
+  max-height: 45vh;
 }
 .legend-header {
   padding:10px 12px;
@@ -139,7 +137,7 @@ body{
 }
 .legend-list {
   overflow:auto;
-  max-height: calc(45vh - 48px); /* header height accounted for */
+  max-height: calc(45vh - 48px);
 }
 .legend-list .item {
   padding:10px 12px;
@@ -147,8 +145,6 @@ body{
   cursor:pointer;
 }
 .legend-list .item:last-child{border-bottom:none}
-
-/* Partner names black by default, hot pink when active */
 .legend-list h4 {
   margin:0;
   font-size:14px;
@@ -156,17 +152,10 @@ body{
   color:#111;
   font-family:"Raleway",sans-serif;
 }
-.legend-list .item.active h4 {
-  color:var(--hotpink);
-  font-weight:700;
-}
-.legend-list .meta {
-  font-size:12px;
-  color:#555;
-  font-family:"Raleway",sans-serif;
-}
+.legend-list .item.active h4 { color:var(--hotpink); font-weight:700; }
+.legend-list .meta { font-size:12px; color:#555; font-family:"Raleway",sans-serif; }
 
-/* Detail panel (white card) */
+/* Detail card now INSIDE the controls panel */
 .detail{
   background:#fff;
   border:1px solid #e5e7eb;
@@ -175,6 +164,7 @@ body{
   position:relative;
   font-family:"Raleway",sans-serif;
   color:#111;
+  margin-top: 12px;  /* space from Sort by */
 }
 .detail h2{margin:0 0 6px 0;font-size:17px;color:#111}
 .detail .kv{font-size:13px}
@@ -198,13 +188,13 @@ body{
 .detail-close:hover{background:#e5e7eb}
 .detail .empty{color:var(--hotpink);font-weight:600}
 
-/* Map box fills remaining height */
+/* Map fills remaining height */
 #map{
   border:1px solid #e5e7eb;
   border-radius:14px;
-  height:100%; /* fills the 1fr row */
+  height:100%;
   background:#fff;
-  min-height: 300px; /* safety minimum */
+  min-height: 300px;
 }
 
 /* Grayscale tiles */
@@ -215,11 +205,9 @@ body{
 .leaflet-container .leaflet-popup-content-wrapper{border-radius:10px}
 .leaflet-container .leaflet-popup-tip{opacity:.95}
 
-/* Responsive: stack panels on smaller screens */
+/* Responsive stacking */
 @media (max-width:1000px){
-  .top-panels {
-    grid-template-columns: 1fr; /* stack Partners above Filters */
-  }
+  .top-panels { grid-template-columns: 1fr; }
   .legend, .legend-list { max-height: none; }
 }
 </style>
@@ -227,15 +215,17 @@ body{
 <body>
 <div class="layout">
   <main class="stage">
-    <!-- Top row: Partners (left) and Filters (right) -->
+
+    <!-- Top: Partners (left) + Filters (right) -->
     <div class="top-panels">
-      <!-- Partners panel (legend) - top-left -->
+
+      <!-- Partners panel -->
       <div class="legend">
         <div class="legend-header"><span>Partners</span></div>
         <div id="list" class="legend-list" role="listbox" aria-label="Partner list"></div>
       </div>
 
-      <!-- Filters panel - top-right -->
+      <!-- Filters panel (NOW includes the detail card) -->
       <div class="controls">
         <div class="row">
           <label>Search</label>
@@ -254,13 +244,13 @@ body{
             <option value="category">Practice Areas (A→Z)</option>
           </select>
         </div>
+
+        <!-- Description panel moved HERE -->
+        <section id="detail" class="detail" aria-live="polite" aria-atomic="true">
+          <div class="empty">Select a partner from the list of names to find out more!</div>
+        </section>
       </div>
     </div>
-
-    <!-- Description panel -->
-    <section id="detail" class="detail" aria-live="polite" aria-atomic="true">
-      <div class="empty">Select a partner from the list of names to find out more!</div>
-    </section>
 
     <!-- Map fills the rest of the iframe height -->
     <div id="map"></div>
@@ -297,7 +287,7 @@ body{
   const layerGroup=L.layerGroup().addTo(map);
   const markers=[];
 
-  // Header mapping helpers (case/space-insensitive)
+  // Header mapping helpers
   let headerMap={};
   function buildHeaderMap(fields){
     headerMap={};
@@ -347,7 +337,7 @@ body{
     els.cats.innerHTML='';
     Array.from(practiceAreas).sort((a,b)=>a.localeCompare(b)).forEach(cat=>{
       const span=document.createElement('span');
-      span.className='chip'; // start cleared
+      span.className='chip';
       span.textContent=cat; span.dataset.value=cat;
       span.onclick=()=>{span.classList.toggle('active');applyFilters();};
       els.cats.appendChild(span);
@@ -449,7 +439,7 @@ body{
         els.detail.innerHTML='<div class="empty">Select a partner from the list of names to find out more!</div>';
         markers.forEach(m=>m.closePopup());
         if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
-        els.list.querySelectorAll('.item').forEach(el=>el.classList.remove('active'));
+        document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
       });
     }
   }
@@ -459,7 +449,7 @@ body{
     const row=filtered.find(r=>r.__id===activeId);
     if(!row) return;
     renderDetail(row);
-    els.list.querySelectorAll('.item').forEach(el=>el.classList.toggle('active', Number(el.dataset.id)===activeId));
+    document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.toggle('active', Number(el.dataset.id)===activeId));
     if(moveMap){
       const lat=parseFloat(pick(row,FIELD_ALIASES.lat));
       const lng=parseFloat(pick(row,FIELD_ALIASES.lng));
@@ -508,7 +498,7 @@ body{
     if(!filtered.find(r=>r.__id===activeId)){
       activeId=null;
       renderDetail(null);
-      els.list.querySelectorAll('.item').forEach(el=>el.classList.remove('active'));
+      document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
     }
   }
 
