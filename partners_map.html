@@ -428,7 +428,6 @@ body{
         <h2>${name}</h2>
         <button class="detail-close" id="detail-close" aria-label="Close">×</button>
       </div>
-      ${primary?`<div class="kv"><b>Main Practice Area:</b> ${primary}</div>`:''}
       ${cats.length?`<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
       ${addrHtml?`<div class="kv"><b>Address:</b> ${addrHtml}</div>`:''}
       ${site?`<div class="kv"><b>Website:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
