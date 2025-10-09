@@ -38,24 +38,17 @@ body{
   box-sizing:border-box;
 }
 
-/* Stage stacks: top-panels then map fills */
+/* Stage stacks: filters bar, then two-column content */
 .stage {
   display:grid;
-  grid-template-rows: auto 1fr;  /* top panels auto, map fills */
+  grid-template-rows: auto auto;
   gap:12px;
   height:100%;
   min-height:0;
 }
 
-/* Top row with two panels (Partners left, Filters right) */
-.top-panels {
-  display:grid;
-  grid-template-columns: 260px 1fr; /* Partners fixed at 260px, Filters takes the rest */
-  gap:16px;
-}
-
-/* Panels style */
-.controls, .legend {
+/* ===== Filters bar (full width at top) ===== */
+.filtersbar {
   background:#fff;
   border:1px solid #e5e7eb;
   border-radius:14px;
@@ -63,22 +56,18 @@ body{
   padding:14px;
   box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
-
-/* Headers hot pink */
-.controls label,
-.legend-header {
+.filtersbar .row { margin-bottom: 12px; }
+.filtersbar .row:last-child { margin-bottom: 0; }
+.filtersbar label {
   color: var(--hotpink);
   font-weight: 800;
   font-size: 18px;
   line-height: 1.2;
+  display:block;
+  margin-bottom:6px;
 }
-
-/* Filters spacing */
-.controls .row { margin-bottom: 16px; }
-.controls .row:last-child { margin-bottom: 0; }
 .row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px}
 
-/* Search input */
 #search {
   width:100%;
   padding:10px;
@@ -89,7 +78,6 @@ body{
   font-family:"Raleway",sans-serif;
 }
 
-/* Practice area chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip {
   border: 1px solid var(--hotpink-border);
@@ -107,9 +95,8 @@ body{
   color: var(--hotpink);
   font-weight: 600;
 }
-#category-filters { margin-bottom: 16px; }
+#category-filters { margin-bottom: 8px; }
 
-/* Clear button */
 .btn-clear {
   border: 1px solid var(--hotpink);
   background: #fff;
@@ -122,7 +109,15 @@ body{
 }
 .btn-clear:hover { background:#f3f4f6; }
 
-/* Legend (Partners) */
+/* ===== Two-column content row ===== */
+.content-2col{
+  display:grid;
+  grid-template-columns: 260px 1fr; /* Partners fixed width, right column flex */
+  gap:16px;
+  align-items:start;
+}
+
+/* Partners (left) */
 .legend {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -132,11 +127,15 @@ body{
   height: auto;
   color: #111;
 }
-.legend-list { max-height: none; overflow: visible; }
 .legend-header {
   padding:10px 12px;
   border-bottom:1px solid var(--hotpink);
+  color: var(--hotpink);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.2;
 }
+.legend-list { max-height: none; overflow: visible; }
 .legend-list .item {
   padding:10px 12px;
   border-bottom:1px solid #e5e7eb;
@@ -153,7 +152,15 @@ body{
 .legend-list .item.active h4 { color:var(--hotpink); font-weight:700; }
 .legend-list .meta { font-size:12px; color:#555; font-family:"Raleway",sans-serif; }
 
-/* Detail card INSIDE the controls panel */
+/* Right column (Description over Map) */
+.rightcol {
+  display:grid;
+  grid-template-rows: auto auto; /* detail auto height, map auto (we control height via JS) */
+  gap:12px;
+  align-items:start;
+}
+
+/* Detail card */
 .detail{
   background:#fff;
   border:1px solid #e5e7eb;
@@ -162,7 +169,6 @@ body{
   position:relative;
   font-family:"Raleway",sans-serif;
   color:#111;
-  margin-top: 12px;  /* space from Sort by */
 }
 .detail h2{margin:0 0 6px 0;font-size:17px;color:#111}
 .detail .kv{font-size:13px}
@@ -170,7 +176,7 @@ body{
 .kv a{text-decoration:underline}
 .section-title{margin-top:10px;font-weight:700;font-size:13px}
 
-/* Category pills in description */
+/* Category pills */
 .pill{
   display:inline-block;
   background: var(--hotpink);
@@ -180,31 +186,31 @@ body{
   font-size:11px;
   margin:2px 4px 0 0;
 }
-
 .detail-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
 .detail-close{border:none;background:#f3f4f6;border-radius:10px;font-size:18px;line-height:1;padding:4px 10px;cursor:pointer}
 .detail-close:hover{background:#e5e7eb}
 .detail .empty{color:var(--hotpink);font-weight:600}
 
-/* Map fills remaining height */
+/* Map (under detail, same width as right column) */
 #map{
   border:1px solid #e5e7eb;
   border-radius:14px;
-  height:100%;
   background:#fff;
-  min-height: 300px;
+  width:100%;
+  height:600px; /* base height; JS will increase when needed */
+  min-height:400px;
 }
 
 /* Grayscale tiles */
 #map .leaflet-tile { filter: grayscale(100%) saturate(0) contrast(1.05); }
 
-/* Logo marker styling */
+/* Logo marker styling (if you use logos) */
 .leaflet-marker-icon.partner-logo-icon {
   border-radius: 50%;
   border: 2px solid #fff;
   background:#fff;
   box-shadow: 0 0 4px rgba(0,0,0,0.25);
-  object-fit: cover;           /* helps if the browser applies it */
+  object-fit: cover;
 }
 
 /* Leaflet popup styling */
@@ -214,8 +220,7 @@ body{
 
 /* Responsive stacking */
 @media (max-width:1000px){
-  .top-panels { grid-template-columns: 1fr; }
-  .legend, .legend-list { max-height: none; }
+  .content-2col { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -223,44 +228,41 @@ body{
 <div class="layout">
   <main class="stage">
 
-    <!-- Top: Partners (left) + Filters (right) -->
-    <div class="top-panels">
+    <!-- Top: Filters bar (Search + Practice Areas + Sort) -->
+    <section class="filtersbar">
+      <div class="row">
+        <label>Search</label>
+        <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
+      </div>
+      <div class="row row-inline">
+        <label style="margin:0">Practice Areas</label>
+        <button id="clear-cats" class="btn-clear" type="button">Clear filters</button>
+      </div>
+      <div id="category-filters" class="chips"></div>
+      <div class="row">
+        <label>Sort by</label>
+        <select id="sort">
+          <option value="name">Name (A→Z)</option>
+          <option value="primary">Main Practice Area (A→Z)</option>
+          <option value="category">Practice Areas (A→Z)</option>
+        </select>
+      </div>
+    </section>
 
-      <!-- Partners panel -->
-      <div class="legend">
+    <!-- Below: Partners (left) + Right column (Description over Map) -->
+    <div class="content-2col">
+      <aside class="legend">
         <div class="legend-header"><span>Partners</span></div>
         <div id="list" class="legend-list" role="listbox" aria-label="Partner list"></div>
-      </div>
+      </aside>
 
-      <!-- Filters panel (includes the detail card) -->
-      <div class="controls">
-        <div class="row">
-          <label>Search</label>
-          <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
-        </div>
-        <div class="row row-inline">
-          <label style="margin:0">Practice Areas</label>
-          <button id="clear-cats" class="btn-clear" type="button">Clear filters</button>
-        </div>
-        <div id="category-filters" class="chips"></div>
-        <div class="row">
-          <label>Sort by</label>
-          <select id="sort">
-            <option value="name">Name (A→Z)</option>
-            <option value="primary">Main Practice Area (A→Z)</option>
-            <option value="category">Practice Areas (A→Z)</option>
-          </select>
-        </div>
-
-        <!-- Description panel -->
+      <section class="rightcol">
         <section id="detail" class="detail" aria-live="polite" aria-atomic="true">
           <div class="empty">Select a partner from the list of names to find out more!</div>
         </section>
-      </div>
+        <div id="map"></div>
+      </section>
     </div>
-
-    <!-- Map fills the rest of the iframe height -->
-    <div id="map"></div>
   </main>
 </div>
 
@@ -285,13 +287,17 @@ body{
     intake:['_Intake','Intake'],
     geoElig:['_GeographicEligibility','Geographic Eligibility'],
     finElig:['_FinancialEligibility','Financial Eligibility'],
-    /* NEW: logo field */
-    logo: ['_Logo','Logo']
+    logo: ['_Logo','Logo'] /* optional: per-partner logo marker */
   };
 
-  const els={search:document.getElementById('search'),sort:document.getElementById('sort'),
-    cats:document.getElementById('category-filters'),clearCats:document.getElementById('clear-cats'),
-    list:document.getElementById('list'),detail:document.getElementById('detail')};
+  const els={
+    search:document.getElementById('search'),
+    sort:document.getElementById('sort'),
+    cats:document.getElementById('category-filters'),
+    clearCats:document.getElementById('clear-cats'),
+    list:document.getElementById('list'),
+    detail:document.getElementById('detail')
+  };
 
   let data=[],filtered=[],activeId=null,currentBounds=null;
   const practiceAreas=new Set();
@@ -376,17 +382,15 @@ body{
       let m;
 
       if (logoUrl) {
-        // Logo marker
         const icon = L.icon({
           iconUrl: logoUrl,
-          iconSize: [40, 40],     // tweak if needed
-          iconAnchor: [20, 40],   // bottom-center is the "point"
-          popupAnchor: [0, -38],  // popup above logo
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -38],
           className: 'partner-logo-icon'
         });
         m = L.marker([lat, lng], { icon });
       } else {
-        // Fallback: pink circle
         m = L.circleMarker([lat,lng], MARKER_STYLE);
       }
 
@@ -440,6 +444,7 @@ body{
   function renderDetail(r){
     if(!r){
       els.detail.innerHTML='<div class="empty">Select a partner from the list of names to find out more!</div>';
+      resizeMap(); // reset to base height
       return;
     }
     const name=pick(r,FIELD_ALIASES.name)||'Untitled';
@@ -474,7 +479,23 @@ body{
         markers.forEach(m=>m.closePopup());
         if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
         document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
+        resizeMap(); // back to base height on close
       });
+    }
+
+    resizeMap(); // enlarge map if detail is long
+  }
+
+  function resizeMap(){
+    const mapEl = document.getElementById('map');
+    const detailEl = els.detail;
+    // Base height 600; add extra so the map can extend beyond partner list when description is long
+    const base = 600;
+    const extra = Math.max(0, (detailEl.scrollHeight || 0) - 300); // only add if detail is fairly long
+    const newH = Math.max(400, base + Math.min(extra, 1200)); // clamp growth to avoid absurd values
+    if (mapEl) {
+      mapEl.style.height = newH + 'px';
+      setTimeout(()=>map.invalidateSize(), 50);
     }
   }
 
@@ -556,6 +577,7 @@ body{
       els.search.addEventListener('input',applyFilters);
       els.sort.addEventListener('change',applyFilters);
       els.clearCats.addEventListener('click',clearCategoryFilters);
+      window.addEventListener('resize', () => { setTimeout(()=>map.invalidateSize(), 50); });
     },
     error:err=>{
       console.error('CSV load error',err);
