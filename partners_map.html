@@ -50,7 +50,7 @@ body{
 /* Top row with two panels (Partners left, Filters right) */
 .top-panels {
   display:grid;
-  grid-template-columns:  260px 1fr; /* Partners fixed at 260px, Filters takes the rest */
+  grid-template-columns: 260px 1fr; /* Partners fixed at 260px, Filters takes the rest */
   gap:16px;
 }
 
@@ -127,23 +127,15 @@ body{
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
-  /* remove overflow/height restrictions */
-  overflow: visible;     
-  max-height: none;      
-  height: auto;          
+  overflow: visible;
+  max-height: none;
+  height: auto;
   color: #111;
 }
-.legend-list {
-  max-height: none;  /* remove inner scroll */
-  overflow: visible;
-}
+.legend-list { max-height: none; overflow: visible; }
 .legend-header {
   padding:10px 12px;
   border-bottom:1px solid var(--hotpink);
-}
-.legend-list {
-  overflow:auto;
-  max-height: calc(45vh - 48px);
 }
 .legend-list .item {
   padding:10px 12px;
@@ -161,7 +153,7 @@ body{
 .legend-list .item.active h4 { color:var(--hotpink); font-weight:700; }
 .legend-list .meta { font-size:12px; color:#555; font-family:"Raleway",sans-serif; }
 
-/* Detail card now INSIDE the controls panel */
+/* Detail card INSIDE the controls panel */
 .detail{
   background:#fff;
   border:1px solid #e5e7eb;
@@ -206,6 +198,15 @@ body{
 /* Grayscale tiles */
 #map .leaflet-tile { filter: grayscale(100%) saturate(0) contrast(1.05); }
 
+/* Logo marker styling */
+.leaflet-marker-icon.partner-logo-icon {
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background:#fff;
+  box-shadow: 0 0 4px rgba(0,0,0,0.25);
+  object-fit: cover;           /* helps if the browser applies it */
+}
+
 /* Leaflet popup styling */
 .leaflet-container .leaflet-popup-content{font-family:"Raleway",system-ui,sans-serif;font-size:13px}
 .leaflet-container .leaflet-popup-content-wrapper{border-radius:10px}
@@ -231,7 +232,7 @@ body{
         <div id="list" class="legend-list" role="listbox" aria-label="Partner list"></div>
       </div>
 
-      <!-- Filters panel (NOW includes the detail card) -->
+      <!-- Filters panel (includes the detail card) -->
       <div class="controls">
         <div class="row">
           <label>Search</label>
@@ -251,7 +252,7 @@ body{
           </select>
         </div>
 
-        <!-- Description panel moved HERE -->
+        <!-- Description panel -->
         <section id="detail" class="detail" aria-live="polite" aria-atomic="true">
           <div class="empty">Select a partner from the list of names to find out more!</div>
         </section>
@@ -273,11 +274,19 @@ body{
   const MARKER_STYLE={radius:6,weight:1.5,color:'var(--hotpink-border)',fillColor:'var(--hotpink)',fillOpacity:0.9};
 
   const FIELD_ALIASES={
-    name:['_Name','Name'],address:['_Address','Address','Location','Street'],lat:['_Latitude','Latitude','Lat'],
-    lng:['_Longitude','Longitude','Lng','Long'],website:['_Website','Website','URL'],
-    description:['_Description','Description','Notes'],category:['_Category','Category','Main Practice areas','Main Practice Areas'],
-    primary:['_PrimaryCategory','PrimaryCategory'],intake:['_Intake','Intake'],
-    geoElig:['_GeographicEligibility','Geographic Eligibility'],finElig:['_FinancialEligibility','Financial Eligibility']
+    name:['_Name','Name'],
+    address:['_Address','Address','Location','Street'],
+    lat:['_Latitude','Latitude','Lat'],
+    lng:['_Longitude','Longitude','Lng','Long'],
+    website:['_Website','Website','URL'],
+    description:['_Description','Description','Notes'],
+    category:['_Category','Category','Main Practice areas','Main Practice Areas'],
+    primary:['_PrimaryCategory','PrimaryCategory'],
+    intake:['_Intake','Intake'],
+    geoElig:['_GeographicEligibility','Geographic Eligibility'],
+    finElig:['_FinancialEligibility','Financial Eligibility'],
+    /* NEW: logo field */
+    logo: ['_Logo','Logo']
   };
 
   const els={search:document.getElementById('search'),sort:document.getElementById('sort'),
@@ -357,11 +366,30 @@ body{
 
   function renderMarkers(rows){
     layerGroup.clearLayers();markers.length=0;
+
     rows.forEach(r=>{
       const lat=parseFloat(pick(r,FIELD_ALIASES.lat));
       const lng=parseFloat(pick(r,FIELD_ALIASES.lng));
       if(isNaN(lat)||isNaN(lng))return;
-      const m=L.circleMarker([lat,lng],MARKER_STYLE);
+
+      const logoUrl = pick(r, FIELD_ALIASES.logo);
+      let m;
+
+      if (logoUrl) {
+        // Logo marker
+        const icon = L.icon({
+          iconUrl: logoUrl,
+          iconSize: [40, 40],     // tweak if needed
+          iconAnchor: [20, 40],   // bottom-center is the "point"
+          popupAnchor: [0, -38],  // popup above logo
+          className: 'partner-logo-icon'
+        });
+        m = L.marker([lat, lng], { icon });
+      } else {
+        // Fallback: pink circle
+        m = L.circleMarker([lat,lng], MARKER_STYLE);
+      }
+
       m.__id=r.__id;
       m.bindPopup(popupHTML(r),{maxWidth:300,autoPan:true,autoPanPadding:[30,30]});
       m.on('click',()=>{selectById(r.__id,true);map.once('moveend',()=>m.openPopup());m.openPopup();});
@@ -373,8 +401,10 @@ body{
         }
         if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
       });
+
       markers.push(m);layerGroup.addLayer(m);
     });
+
     currentBounds=boundsFromRows(rows);
     map.fitBounds(currentBounds,{padding:[20,20]});
   }
@@ -417,7 +447,6 @@ body{
     const site=pick(r,FIELD_ALIASES.website);
     const desc=pick(r,FIELD_ALIASES.description);
     const cats=splitCats(pick(r,FIELD_ALIASES.category));
-    const primary=pick(r,FIELD_ALIASES.primary)||(cats[0]||'');
     const intake=pick(r,FIELD_ALIASES.intake);
     const geo=pick(r,FIELD_ALIASES.geoElig);
     const fin=pick(r,FIELD_ALIASES.finElig);
