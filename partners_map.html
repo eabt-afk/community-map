@@ -229,6 +229,17 @@ body{
 /* Grayscale tiles */
 #map .leaflet-tile { filter: grayscale(100%) saturate(0) contrast(1.05); }
 
+/* Logo markers on the map */
+.leaflet-marker-icon.partner-logo-icon {
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  border:2px solid #fff;
+  background:#fff;
+  box-shadow:0 0 6px rgba(0,0,0,.25);
+  object-fit:cover;
+}
+
 /* Leaflet popup styling */
 .leaflet-container .leaflet-popup-content{font-family:"Raleway",system-ui,sans-serif;font-size:13px}
 .leaflet-container .leaflet-popup-content-wrapper{border-radius:10px}
@@ -303,7 +314,7 @@ body{
     intake:['_Intake','Intake'],
     geoElig:['_GeographicEligibility','Geographic Eligibility'],
     finElig:['_FinancialEligibility','Financial Eligibility'],
-    logo:['_Logo','Logo'] // NEW: partner logo
+    logo:['_Logo','Logo'] // partner logo
   };
 
   const els={
@@ -370,29 +381,30 @@ body{
     return b.isValid()? b : L.latLngBounds([[41.85,-87.75],[42.05,-87.55]]);
   }
 
-  function renderCategories(){
-    els.cats.innerHTML='';
-    Array.from(practiceAreas).sort((a,b)=>a.localeCompare(b)).forEach(cat=>{
-      const span=document.createElement('span');
-      span.className='chip';
-      span.textContent=cat; span.dataset.value=cat;
-      span.onclick=()=>{span.classList.toggle('active');applyFilters();};
-      els.cats.appendChild(span);
-    });
-  }
-
-  function clearCategoryFilters(){
-    els.cats.querySelectorAll('.chip.active').forEach(ch=>ch.classList.remove('active'));
-    applyFilters();
-  }
-
+  // ✅ Updated: logo markers on the map (fallback to pink circle)
   function renderMarkers(rows){
-    layerGroup.clearLayers();markers.length=0;
+    layerGroup.clearLayers(); markers.length=0;
+
     rows.forEach(r=>{
       const lat=parseFloat(pick(r,FIELD_ALIASES.lat));
       const lng=parseFloat(pick(r,FIELD_ALIASES.lng));
       if(isNaN(lat)||isNaN(lng))return;
-      const m=L.circleMarker([lat,lng],MARKER_STYLE);
+
+      const logo=pick(r,FIELD_ALIASES.logo);
+      let m;
+      if(logo){
+        const icon=L.icon({
+          iconUrl:logo,
+          iconSize:[40,40],
+          iconAnchor:[20,40],     // bottom center on point
+          popupAnchor:[0,-38],
+          className:'partner-logo-icon'
+        });
+        m=L.marker([lat,lng],{icon});
+      } else {
+        m=L.circleMarker([lat,lng],MARKER_STYLE);
+      }
+
       m.__id=r.__id;
       m.bindPopup(popupHTML(r),{maxWidth:300,autoPan:true,autoPanPadding:[30,30]});
       m.on('click',()=>{selectById(r.__id,true);map.once('moveend',()=>m.openPopup());m.openPopup();});
@@ -404,8 +416,11 @@ body{
         }
         if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
       });
-      markers.push(m);layerGroup.addLayer(m);
+
+      markers.push(m);
+      layerGroup.addLayer(m);
     });
+
     currentBounds=boundsFromRows(rows);
     map.fitBounds(currentBounds,{padding:[20,20]});
   }
@@ -545,13 +560,25 @@ body{
         return Object.assign({},r,{__id:idx+1});
       });
 
-      renderCategories();
+      // Render category chips from data
+      els.cats.innerHTML='';
+      Array.from(practiceAreas).sort((a,b)=>a.localeCompare(b)).forEach(cat=>{
+        const span=document.createElement('span');
+        span.className='chip';
+        span.textContent=cat; span.dataset.value=cat;
+        span.onclick=()=>{span.classList.toggle('active');applyFilters();};
+        els.cats.appendChild(span);
+      });
+
       applyFilters();
 
       // listeners
       els.search.addEventListener('input',applyFilters);
       els.sort.addEventListener('change',applyFilters);
-      els.clearCats.addEventListener('click',clearCategoryFilters);
+      els.clearCats.addEventListener('click',()=>{
+        els.cats.querySelectorAll('.chip.active').forEach(ch=>ch.classList.remove('active'));
+        applyFilters();
+      });
     },
     error:err=>{
       console.error('CSV load error',err);
