@@ -52,7 +52,28 @@ body{
   display:grid;
   grid-template-columns: 260px 1fr; /* Partners fixed at 260px, Filters/Detail take the rest */
   gap:16px;
-  align-items:start;
+  align-items:stretch;
+}
+  /* Panels fill the grid track height */
+.legend, .controls {
+  height: 100%;
+}
+
+/* Let the right panel stack filters + description vertically */
+.controls {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Let the description area expand to fill remaining height in the right panel */
+.detail {
+  margin-top: 12px;
+  flex-grow: 1;   /* <- matches Partners panel height without inner scroll */
+}
+
+/* Ensure no inner scrolling in the partners list */
+.legend, .legend-list {
+  overflow: visible;
 }
 
 /* Panels style */
