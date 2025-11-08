@@ -91,7 +91,7 @@ body{
 /* Language toggle pill */
 .lang-toggle{
   border:1px solid var(--hotpink);
-  background:#fff; color:var(--hotpink);
+  background:#fff; color:#var(--hotpink);
   border-radius:999px; padding:8px 16px;
   font-size:13px; cursor:pointer;
   font-family:"Raleway", sans-serif; font-weight:700;
@@ -235,7 +235,7 @@ body{
         <!-- Partner Program chips -->
         <div class="row">
           <div class="row-inline">
-            <label id="lbl-program" style="margin:0">Partnership Program</label>
+            <label id="lbl-program" style="margin:0">Partner Program</label>
             <button id="clear-programs" class="btn-clear" type="button">Clear filters</button>
           </div>
           <div id="program-filters" class="chips"></div>
@@ -421,10 +421,10 @@ body{
     els.search.placeholder = t.searchPH;
 
     els.lblProgram.textContent = t.program;
-    els.clearPrograms.textContent = t.clearFilters;
+    if (els.clearPrograms) els.clearPrograms.textContent = t.clearFilters;
 
     els.lblPractice.textContent = t.practice;
-    els.clearCats.textContent = t.clearFilters;
+    if (els.clearCats) els.clearCats.textContent = t.clearFilters;
 
     els.lblSort.textContent = t.sortBy;
     els.optName.textContent = t.optName;
