@@ -568,49 +568,60 @@ body{
     });
   }
 
-  function renderDetail(r){
-    const t = i18n[currentLang];
-    if(!r){ els.detail.innerHTML=`<div class="empty">${t.empty}</div>`; return; }
+function renderDetail(r){
+  const t = i18n[currentLang];
+  if(!r){ els.detail.innerHTML=`<div class="empty">${t.empty}</div>`; return; }
 
-    const name=pickLang(r,'name')||'Untitled';
-    const logo=pick(r,FIELD_ALIASES.logo);
-    const addr=pickLang(r,'address');
-    const site=pick(r,FIELD_ALIASES.website);
-    const desc=pickLang(r,'description');
-    const cats=splitList(pickLang(r,'category'));
-    const intake=pickLang(r,'intake');
-    const geo=pickLang(r,'geoElig');
-    const fin=pickLang(r,'finElig');
-    const addrHtml=addr?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`:'';
+  const name=pickLang(r,'name')||'Untitled';
+  const logo=pick(r,FIELD_ALIASES.logo);
+  const addr=pickLang(r,'address');
+  const site=pick(r,FIELD_ALIASES.website);
+  const desc=pickLang(r,'description');
 
-    els.detail.innerHTML=`
-      <div class="detail-header">
-        <div class="titlewrap">
-          ${logo ? `<img class="detail-logo" src="${logo}" alt="${name} logo" loading="lazy">` : ``}
-          <h2>${name}</h2>
-        </div>
-        <button class="detail-close" id="detail-close" aria-label="Close">×</button>
+  const cats=splitList(pickLang(r,'category'));
+  const programs=splitList(pickLang(r,'program'));       // <-- NEW
+  const intake=pickLang(r,'intake');
+  const geo=pickLang(r,'geoElig');
+  const fin=pickLang(r,'finElig');
+
+  const addrHtml=addr
+    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`
+    : '';
+
+  els.detail.innerHTML=`
+    <div class="detail-header">
+      <div class="titlewrap">
+        ${logo ? `<img class="detail-logo" src="${logo}" alt="${name} logo" loading="lazy">` : ``}
+        <h2>${name}</h2>
       </div>
-      ${cats.length?`<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>`:''}
-      ${addrHtml?`<div class="kv"><b>${t.address}:</b> ${addrHtml}</div>`:''}
-      ${site?`<div class="kv"><b>${t.websiteLabel}:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
-      ${desc?  `<div class="section-title"><strong>${t.about}</strong></div><div>${desc}</div>` : '' }
-      ${intake?`<div class="section-title"><strong>${t.intake}</strong></div><div>${intake}</div>` : '' }
-      ${geo?   `<div class="section-title"><strong>${t.geo}</strong></div><div>${geo}</div>` : '' }
-      ${fin?   `<div class="section-title"><strong>${t.fin}</strong></div><div>${fin}</div>` : '' }
-    `;
+      <button class="detail-close" id="detail-close" aria-label="Close">×</button>
+    </div>
 
-    const closeBtn=document.getElementById('detail-close');
-    if(closeBtn){
-      closeBtn.addEventListener('click',()=>{
-        activeId=null;
-        els.detail.innerHTML=`<div class="empty">${t.empty}</div>`;
-        markers.forEach(m=>m.closePopup());
-        if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
-        document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
-      });
-    }
+    ${cats.length ? `<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>` : ''}
+    ${programs.length ? `
+      <div class="section-title"><strong>${t.program}</strong></div>
+      <div>${programs.map(p=>`<span class="pill">${p}</span>`).join('')}</div>
+    ` : ''}
+    ${addrHtml ? `<div class="kv"><b>${t.address}:</b> ${addrHtml}</div>` : ''}
+    ${site ? `<div class="kv"><b>${t.websiteLabel}:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>` : ''}
+    ${desc ? `<div class="section-title"><strong>${t.about}</strong></div><div>${desc}</div>` : ''}
+    ${intake ? `<div class="section-title"><strong>${t.intake}</strong></div><div>${intake}</div>` : ''}
+    ${geo ? `<div class="section-title"><strong>${t.geo}</strong></div><div>${geo}</div>` : ''}
+    ${fin ? `<div class="section-title"><strong>${t.fin}</strong></div><div>${fin}</div>` : '' }
+  `;
+
+  const closeBtn=document.getElementById('detail-close');
+  if(closeBtn){
+    closeBtn.addEventListener('click',()=>{
+      activeId=null;
+      els.detail.innerHTML=`<div class="empty">${t.empty}</div>`;
+      markers.forEach(m=>m.closePopup());
+      if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
+      document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
+    });
   }
+}
+
 
   /* Selection */
   function selectById(id,moveMap){
