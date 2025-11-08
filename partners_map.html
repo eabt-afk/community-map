@@ -15,6 +15,10 @@
   --hotpink-border: hsla(323, 98%, 35%, 1);
 }
 
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
 html, body { height: 100%; margin: 0; }
 body{
   font-family:"Raleway",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
@@ -38,13 +42,13 @@ body{
   gap:12px;
 }
 
-/* Map — shortened height */
+/* Map — keep your shorter height */
 #map{
   border:1px solid #e5e7eb;
   border-radius:14px;
   background:#fff;
   width:100%;
-  height:calc(100vh - 480px); /* shorter map; adjust this value to taste */
+  height:calc(100vh - 480px);
   min-height:300px;
 }
 
@@ -91,7 +95,7 @@ body{
 /* Language toggle pill */
 .lang-toggle{
   border:1px solid var(--hotpink);
-  background:#fff; color:var(--hotpink);
+  background:#fff; color:#var(--hotpink);
   border-radius:999px; padding:8px 16px;
   font-size:13px; cursor:pointer;
   font-family:"Raleway", sans-serif; font-weight:700;
@@ -100,22 +104,26 @@ body{
   background:var(--hotpink); color:#fff; border-color:var(--hotpink);
 }
 
-/* Rows */
+/* Spacing between rows in controls */
 .controls .row { margin-bottom: 12px; }
 
-/* Two-up row for Search + Zip */
+/* >>> Search + ZIP row (75% / 25%) <<< */
 .row-two{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:12px;
+  display:flex;
+  gap:12px;               /* space between the two fields */
+  align-items:flex-start;
+  width:100%;
 }
 .field{
   display:flex;
   flex-direction:column;
+  min-width:0;            /* prevents overflow when long placeholders exist */
 }
-.field label{
-  margin-bottom:10px;
-}
+.field--search{ flex: 3 1 0; }  /* 75% */
+.field--zip{    flex: 1 1 0; }  /* 25% */
+
+/* Field labels */
+.field label{ margin-bottom:10px; }
 
 /* Inputs */
 #search, #zip{
@@ -125,6 +133,7 @@ body{
   border-radius:10px;
   background:#fff; color:#111;
   font-family:"Raleway",sans-serif;
+  box-sizing:border-box;     /* ensures borders don’t overflow container */
 }
 
 /* Inline header + clear button rows */
@@ -153,7 +162,7 @@ body{
 .btn-clear {
   border:1px solid var(--hotpink);
   background:#fff;
-  color:#var(--hotpink);
+  color:var(--hotpink);
   border-radius:999px;
   padding:5px 10px;
   font-size:12px;
@@ -220,10 +229,14 @@ body{
   box-shadow:0 0 6px rgba(0,0,0,.25);object-fit:cover;
 }
 
-/* Smaller screens */
+/* Smaller screens — if you DO want stacking on mobile, uncomment below
+@media(max-width:800px){
+  .row-two{ flex-direction:column; }
+  .field--search, .field--zip { flex: 1 1 auto; }
+}
+*/
 @media(max-width:1000px){
   .top-panels{grid-template-columns:1fr;}
-  .row-two{grid-template-columns:1fr;} /* stack search + zip on small screens */
   #map{ height:50vh; }
 }
 </style>
@@ -245,13 +258,13 @@ body{
           <button id="lang-toggle" class="lang-toggle" aria-pressed="false" title="Switch to Spanish">Español</button>
         </div>
 
-        <!-- Search + Zip on one row -->
+        <!-- Search (75%) + Zip (25%) -->
         <div class="row row-two">
-          <div class="field">
+          <div class="field field--search">
             <label id="lbl-search">Search</label>
             <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
           </div>
-          <div class="field">
+          <div class="field field--zip">
             <label id="lbl-zip">Zip Code</label>
             <input id="zip" type="text" inputmode="numeric" pattern="\\d*" maxlength="5" placeholder="e.g., 60612"/>
           </div>
@@ -442,23 +455,6 @@ body{
     return pick(row,FIELD_ALIASES[key]||[]);
   }
   const splitList = s => (s||'').split(/[,;]+/).map(v=>v.trim()).filter(Boolean);
-
-  /* Zip helpers */
-  function extractZipTokens(str){
-    const tokens = [];
-    const m = String(str||'').match(/\d{5}/g);
-    if(m){ m.forEach(z=>tokens.push(z)); }
-    return tokens;
-  }
-  function buildZipSet(str){
-    const set = new Set();
-    extractZipTokens(str).forEach(z=>set.add(z));
-    return set;
-  }
-  function normalizeZipInput(s){
-    const m = String(s||'').match(/\d{5}/);
-    return m ? m[0] : '';
-  }
 
   /* i18n swap */
   function setLang(lang){
@@ -693,7 +689,7 @@ body{
   /* Filtering / searching / sorting */
   function applyFilters(){
     const q=(els.search.value||'').toLowerCase();
-    const zipInput = normalizeZipInput(els.zip.value);
+    const zipInput = (els.zip.value.match(/\d{5}/) || [''])[0];
     const activePrograms=[...els.programChips.querySelectorAll('.chip.active')].map(x=>x.dataset.value);
     const activeCats=[...els.catChips.querySelectorAll('.chip.active')].map(x=>x.dataset.value);
     const sortBy=els.sort.value;
