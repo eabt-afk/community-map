@@ -21,7 +21,7 @@ body{
   background:#000;
   color:#111;
   font-size:14px;
-  overflow:hidden; /* keep page from scrolling; panels/map manage their own scroll */
+  overflow:hidden;
 }
 
 /* Overall layout */
@@ -34,26 +34,26 @@ body{
 }
 .stage {
   display:grid;
-  grid-template-rows:auto 1fr; /* top panels (short) then tall map */
+  grid-template-rows:auto 1fr;
   gap:12px;
 }
 
-/* Map is taller because top panels are compact */
+/* Map */
 #map{
   border:1px solid #e5e7eb;
   border-radius:14px;
   background:#fff;
   width:100%;
-  height:calc(100vh - 340px); /* adjust if you want more/less map height */
+  height:calc(100vh - 340px);
   min-height:360px;
 }
 
-/* Top panels row (short) */
+/* Panels row */
 .top-panels {
   display:grid;
   grid-template-columns: 260px 1fr;
   gap:16px;
-  max-height:900px; /* compact height */
+  max-height:900px;
 }
 
 /* Cards */
@@ -63,16 +63,16 @@ body{
   border-radius:14px;
   box-shadow:0 2px 8px rgba(0,0,0,.08);
   padding:14px;
-  overflow-y:auto; /* internal scroll if content is long */
+  overflow-y:auto;
 }
 
 /* Headings */
 .legend-header, .controls label {
   color:var(--hotpink);
-  font-weight:800;  
-  font-size: 18px;        /* larger but still elegant */
-  line-height: 1.3;
-  font-family: "Raleway", sans-serif;
+  font-weight:800;
+  font-size:20px; /* larger/cleaner */
+  line-height:1.25;
+  font-family:"Raleway",sans-serif;
 }
 .legend-header{
   border-bottom:1px solid var(--hotpink);
@@ -91,7 +91,7 @@ body{
 /* Language toggle pill */
 .lang-toggle{
   border:1px solid var(--hotpink);
-  background:#fff; color:#var(--hotpink);
+  background:#fff; color:var(--hotpink);
   border-radius:999px; padding:8px 16px;
   font-size:13px; cursor:pointer;
   font-family:"Raleway", sans-serif; font-weight:700;
@@ -101,9 +101,9 @@ body{
 }
 
 /* Inputs */
-#lbl-search { display:block; margin-bottom: 10px; }
-#search{
-  width:90%; /* shorter width, same height */
+#lbl-search, #lbl-zip { display:block; margin-bottom:10px; }
+#search, #zip{
+  width:90%;
   padding:11px;
   border:1px solid #d1d5db;
   border-radius:10px;
@@ -111,9 +111,9 @@ body{
   font-family:"Raleway",sans-serif;
 }
 
-/* Sections inside controls */
+/* Rows */
 .controls .row { margin-bottom: 12px; }
-.row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom: 4px;}
+.row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
 
 /* Chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -154,7 +154,7 @@ body{
 .legend-list .item:last-child{border-bottom:none}
 .legend-list h4{margin:0;font-size:14px;color:#111;}
 .legend-list .item.active h4{color:var(--hotpink);}
-.legend-list .meta{display:none !important;} /* hide the subline */
+.legend-list .meta{display:none !important;}
 
 /* Detail card */
 .detail{
@@ -190,7 +190,7 @@ body{
 .detail-close:hover{background:#e5e7eb;}
 .detail .empty{color:var(--hotpink);font-weight:600;}
 
-/* Bold section headers (About, Intake, etc.) */
+/* Section headers */
 .section-title {
   margin-top:10px; font-weight:700; font-size:13px; color:#111;
 }
@@ -203,7 +203,7 @@ body{
   box-shadow:0 0 6px rgba(0,0,0,.25);object-fit:cover;
 }
 
-/* Smaller screens: stack panels */
+/* Smaller screens */
 @media(max-width:1000px){
   .top-panels{grid-template-columns:1fr;}
   #map{ height:50vh; }
@@ -222,14 +222,21 @@ body{
 
       <!-- Filters + Description -->
       <section class="controls">
-        <!-- Only the language toggle in this top row -->
+        <!-- Language toggle -->
         <div class="row-top">
           <button id="lang-toggle" class="lang-toggle" aria-pressed="false" title="Switch to Spanish">Español</button>
         </div>
 
+        <!-- Search -->
         <div class="row">
           <label id="lbl-search">Search</label>
           <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
+        </div>
+
+        <!-- Zip Code -->
+        <div class="row">
+          <label id="lbl-zip">Zip Code</label>
+          <input id="zip" type="text" inputmode="numeric" pattern="\\d*" maxlength="5" placeholder="e.g., 60612"/>
         </div>
 
         <!-- Partner Program chips -->
@@ -317,6 +324,8 @@ body{
       partners:'Partners',
       search:'Search',
       searchPH:'Search partners, services, or notes…',
+      zip:'Zip Code',
+      zipPH:'e.g., 60612',
       program:'Partner Program',
       clearFilters:'Clear filters',
       practice:'Practice Areas',
@@ -333,6 +342,8 @@ body{
       partners:'Socios',
       search:'Buscar',
       searchPH:'Buscar organizaciones, servicios o notas…',
+      zip:'Código postal',
+      zipPH:'p. ej., 60612',
       program:'Tipo de colaboración',
       clearFilters:'Borrar filtros',
       practice:'Áreas de práctica',
@@ -353,6 +364,9 @@ body{
     lblPartners:document.getElementById('lbl-partners'),
     lblSearch:document.getElementById('lbl-search'),
     search:document.getElementById('search'),
+
+    lblZip:document.getElementById('lbl-zip'),
+    zip:document.getElementById('zip'),
 
     lblProgram:document.getElementById('lbl-program'),
     clearPrograms:document.getElementById('clear-programs'),
@@ -377,6 +391,7 @@ body{
   let currentLang='en';
   let headerMap={};
   let data=[], filtered=[], activeId=null, currentBounds=null;
+
   const map=L.map('map',{zoomControl:true,attributionControl:true});
   L.tileLayer(TILE_URL,{maxZoom:19,attribution:ATTRIB}).addTo(map);
   const layerGroup=L.layerGroup().addTo(map);
@@ -410,6 +425,24 @@ body{
   }
   const splitList = s => (s||'').split(/[,;]+/).map(v=>v.trim()).filter(Boolean);
 
+  /* Zip helpers */
+  function extractZipTokens(str){
+    // returns array of 5-digit ZIPs found in the string
+    const tokens = [];
+    const m = String(str||'').match(/\d{5}/g);
+    if(m){ m.forEach(z=>tokens.push(z)); }
+    return tokens;
+  }
+  function buildZipSet(str){
+    const set = new Set();
+    extractZipTokens(str).forEach(z=>set.add(z));
+    return set;
+  }
+  function normalizeZipInput(s){
+    const m = String(s||'').match(/\d{5}/);
+    return m ? m[0] : '';
+  }
+
   /* i18n swap */
   function setLang(lang){
     currentLang = lang;
@@ -420,11 +453,14 @@ body{
     els.lblSearch.textContent = t.search;
     els.search.placeholder = t.searchPH;
 
+    els.lblZip.textContent = t.zip;
+    els.zip.placeholder = t.zipPH;
+
     els.lblProgram.textContent = t.program;
-    if (els.clearPrograms) els.clearPrograms.textContent = t.clearFilters;
+    els.clearPrograms.textContent = t.clearFilters;
 
     els.lblPractice.textContent = t.practice;
-    if (els.clearCats) els.clearCats.textContent = t.clearFilters;
+    els.clearCats.textContent = t.clearFilters;
 
     els.lblSort.textContent = t.sortBy;
     els.optName.textContent = t.optName;
@@ -568,60 +604,59 @@ body{
     });
   }
 
-function renderDetail(r){
-  const t = i18n[currentLang];
-  if(!r){ els.detail.innerHTML=`<div class="empty">${t.empty}</div>`; return; }
+  function renderDetail(r){
+    const t = i18n[currentLang];
+    if(!r){ els.detail.innerHTML=`<div class="empty">${t.empty}</div>`; return; }
 
-  const name=pickLang(r,'name')||'Untitled';
-  const logo=pick(r,FIELD_ALIASES.logo);
-  const addr=pickLang(r,'address');
-  const site=pick(r,FIELD_ALIASES.website);
-  const desc=pickLang(r,'description');
+    const name=pickLang(r,'name')||'Untitled';
+    const logo=pick(r,FIELD_ALIASES.logo);
+    const addr=pickLang(r,'address');
+    const site=pick(r,FIELD_ALIASES.website);
+    const desc=pickLang(r,'description');
 
-  const cats=splitList(pickLang(r,'category'));
-  const programs=splitList(pickLang(r,'program'));       // <-- NEW
-  const intake=pickLang(r,'intake');
-  const geo=pickLang(r,'geoElig');
-  const fin=pickLang(r,'finElig');
+    const cats=splitList(pickLang(r,'category'));
+    const programs=splitList(pickLang(r,'program'));
+    const intake=pickLang(r,'intake');
+    const geo=pickLang(r,'geoElig');
+    const fin=pickLang(r,'finElig');
 
-  const addrHtml=addr
-    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`
-    : '';
+    const addrHtml=addr?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${addr}</a>`:'';
 
-  els.detail.innerHTML=`
-    <div class="detail-header">
-      <div class="titlewrap">
-        ${logo ? `<img class="detail-logo" src="${logo}" alt="${name} logo" loading="lazy">` : ``}
-        <h2>${name}</h2>
+    els.detail.innerHTML=`
+      <div class="detail-header">
+        <div class="titlewrap">
+          ${logo ? `<img class="detail-logo" src="${logo}" alt="${name} logo" loading="lazy">` : ``}
+          <h2>${name}</h2>
+        </div>
+        <button class="detail-close" id="detail-close" aria-label="Close">×</button>
       </div>
-      <button class="detail-close" id="detail-close" aria-label="Close">×</button>
-    </div>
 
-    ${cats.length ? `<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>` : ''}
-    ${programs.length ? `
-      <div class="section-title"><strong>${t.program}</strong></div>
-      <div>${programs.map(p=>`<span class="pill">${p}</span>`).join('')}</div>
-    ` : ''}
-    ${addrHtml ? `<div class="kv"><b>${t.address}:</b> ${addrHtml}</div>` : ''}
-    ${site ? `<div class="kv"><b>${t.websiteLabel}:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>` : ''}
-    ${desc ? `<div class="section-title"><strong>${t.about}</strong></div><div>${desc}</div>` : ''}
-    ${intake ? `<div class="section-title"><strong>${t.intake}</strong></div><div>${intake}</div>` : ''}
-    ${geo ? `<div class="section-title"><strong>${t.geo}</strong></div><div>${geo}</div>` : ''}
-    ${fin ? `<div class="section-title"><strong>${t.fin}</strong></div><div>${fin}</div>` : '' }
-  `;
+      ${cats.length ? `<div>${cats.map(c=>`<span class="pill">${c}</span>`).join('')}</div>` : ''}
 
-  const closeBtn=document.getElementById('detail-close');
-  if(closeBtn){
-    closeBtn.addEventListener('click',()=>{
-      activeId=null;
-      els.detail.innerHTML=`<div class="empty">${t.empty}</div>`;
-      markers.forEach(m=>m.closePopup());
-      if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
-      document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
-    });
+      ${programs.length ? `
+        <div class="section-title"><strong>${t.program}</strong></div>
+        <div>${programs.map(p=>`<span class="pill">${p}</span>`).join('')}</div>
+      ` : ''}
+
+      ${addrHtml?`<div class="kv"><b>${t.address}:</b> ${addrHtml}</div>`:''}
+      ${site?`<div class="kv"><b>${t.websiteLabel}:</b> <a href="${site}" target="_blank" rel="noopener">${site}</a></div>`:''}
+      ${desc?  `<div class="section-title"><strong>${t.about}</strong></div><div>${desc}</div>` : '' }
+      ${intake?`<div class="section-title"><strong>${t.intake}</strong></div><div>${intake}</div>` : '' }
+      ${geo?   `<div class="section-title"><strong>${t.geo}</strong></div><div>${geo}</div>` : '' }
+      ${fin?   `<div class="section-title"><strong>${t.fin}</strong></div><div>${fin}</div>` : '' }
+    `;
+
+    const closeBtn=document.getElementById('detail-close');
+    if(closeBtn){
+      closeBtn.addEventListener('click',()=>{
+        activeId=null;
+        els.detail.innerHTML=`<div class="empty">${t.empty}</div>`;
+        markers.forEach(m=>m.closePopup());
+        if(currentBounds) map.fitBounds(currentBounds,{padding:[20,20]});
+        document.querySelectorAll('.legend-list .item').forEach(el=>el.classList.remove('active'));
+      });
+    }
   }
-}
-
 
   /* Selection */
   function selectById(id,moveMap){
@@ -642,6 +677,7 @@ function renderDetail(r){
   /* Filtering / searching / sorting */
   function applyFilters(){
     const q=(els.search.value||'').toLowerCase();
+    const zipInput = normalizeZipInput(els.zip.value);
     const activePrograms=[...els.programChips.querySelectorAll('.chip.active')].map(x=>x.dataset.value);
     const activeCats=[...els.catChips.querySelectorAll('.chip.active')].map(x=>x.dataset.value);
     const sortBy=els.sort.value;
@@ -665,7 +701,9 @@ function renderDetail(r){
       ].filter(Boolean).join(' ').toLowerCase();
       const inSearch = q ? hay.includes(q) : true;
 
-      return inProgram && inCategory && inSearch;
+      const inZip = zipInput ? (r.__zipsSet && r.__zipsSet.has(zipInput)) : true;
+
+      return inProgram && inCategory && inSearch && inZip;
     });
 
     filtered.sort((a,b)=>{
@@ -696,7 +734,12 @@ function renderDetail(r){
     complete:res=>{
       const fields=(res.meta && res.meta.fields)||[];
       buildHeaderMap(fields);
-      data=res.data.map((r,idx)=>Object.assign({},r,{__id:idx+1}));
+      data=res.data.map((r,idx)=>{
+        // Build a fast Set of 5-digit ZIPs per row (works even with thousands)
+        const zipStr = pick(r, FIELD_ALIASES.zips);
+        const __zipsSet = buildZipSet(zipStr);
+        return Object.assign({}, r, { __id:idx+1, __zipsSet });
+      });
 
       renderProgramChips();
       renderCategoryChips();
@@ -704,6 +747,7 @@ function renderDetail(r){
 
       /* listeners */
       els.search.addEventListener('input',applyFilters);
+      els.zip.addEventListener('input',applyFilters);
       els.sort.addEventListener('change',applyFilters);
 
       els.clearPrograms.addEventListener('click', ()=>{
