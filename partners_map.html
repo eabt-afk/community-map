@@ -236,7 +236,7 @@ body{
         <div class="row">
           <div class="row-inline">
             <label id="lbl-program" style="margin:0">Partnership Program</label>
-            <button id="clear-programs" class="btn-clear" type="button">Clear</button>
+            <button id="clear-programs" class="btn-clear" type="button">Clear filters</button>
           </div>
           <div id="program-filters" class="chips"></div>
         </div>
@@ -245,7 +245,7 @@ body{
         <div class="row">
           <div class="row-inline">
             <label id="lbl-practice" style="margin:0">Practice Areas</label>
-            <button id="clear-cats" class="btn-clear" type="button">Clear</button>
+            <button id="clear-cats" class="btn-clear" type="button">Clear filters</button>
           </div>
           <div id="category-filters" class="chips"></div>
         </div>
@@ -318,7 +318,7 @@ body{
       search:'Search',
       searchPH:'Search partners, services, or notes…',
       program:'Partner Program',
-      clear:'Clear',
+      clearFilters:'Clear filters',
       practice:'Practice Areas',
       sortBy:'Sort by',
       optName:'Name (A→Z)',
@@ -334,7 +334,7 @@ body{
       search:'Buscar',
       searchPH:'Buscar organizaciones, servicios o notas…',
       program:'Tipo de colaboración',
-      clear:'Borrar',
+      clearFilters:'Borrar filtros',
       practice:'Áreas de práctica',
       sortBy:'Ordenar por',
       optName:'Nombre (A→Z)',
@@ -421,10 +421,10 @@ body{
     els.search.placeholder = t.searchPH;
 
     els.lblProgram.textContent = t.program;
-    els.clearPrograms.textContent = t.clear;
+    els.clearPrograms.textContent = t.clearFilters;
 
     els.lblPractice.textContent = t.practice;
-    els.clearCats.textContent = t.clear;
+    els.clearCats.textContent = t.clearFilters;
 
     els.lblSort.textContent = t.sortBy;
     els.optName.textContent = t.optName;
