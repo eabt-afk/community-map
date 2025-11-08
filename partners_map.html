@@ -38,14 +38,14 @@ body{
   gap:12px;
 }
 
-/* Map */
+/* Map — shortened height */
 #map{
   border:1px solid #e5e7eb;
   border-radius:14px;
   background:#fff;
   width:100%;
-  height:calc(100vh - 340px);
-  min-height:360px;
+  height:calc(100vh - 480px); /* shorter map; adjust this value to taste */
+  min-height:300px;
 }
 
 /* Panels row */
@@ -70,7 +70,7 @@ body{
 .legend-header, .controls label {
   color:var(--hotpink);
   font-weight:800;
-  font-size:20px; /* larger/cleaner */
+  font-size:20px;
   line-height:1.25;
   font-family:"Raleway",sans-serif;
 }
@@ -100,10 +100,26 @@ body{
   background:var(--hotpink); color:#fff; border-color:var(--hotpink);
 }
 
+/* Rows */
+.controls .row { margin-bottom: 12px; }
+
+/* Two-up row for Search + Zip */
+.row-two{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+}
+.field{
+  display:flex;
+  flex-direction:column;
+}
+.field label{
+  margin-bottom:10px;
+}
+
 /* Inputs */
-#lbl-search, #lbl-zip { display:block; margin-bottom:10px; }
 #search, #zip{
-  width:90%;
+  width:100%;
   padding:11px;
   border:1px solid #d1d5db;
   border-radius:10px;
@@ -111,9 +127,10 @@ body{
   font-family:"Raleway",sans-serif;
 }
 
-/* Rows */
-.controls .row { margin-bottom: 12px; }
-.row-inline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+/* Inline header + clear button rows */
+.row-inline{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;
+}
 
 /* Chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -136,7 +153,7 @@ body{
 .btn-clear {
   border:1px solid var(--hotpink);
   background:#fff;
-  color:var(--hotpink);
+  color:#var(--hotpink);
   border-radius:999px;
   padding:5px 10px;
   font-size:12px;
@@ -206,6 +223,7 @@ body{
 /* Smaller screens */
 @media(max-width:1000px){
   .top-panels{grid-template-columns:1fr;}
+  .row-two{grid-template-columns:1fr;} /* stack search + zip on small screens */
   #map{ height:50vh; }
 }
 </style>
@@ -227,16 +245,16 @@ body{
           <button id="lang-toggle" class="lang-toggle" aria-pressed="false" title="Switch to Spanish">Español</button>
         </div>
 
-        <!-- Search -->
-        <div class="row">
-          <label id="lbl-search">Search</label>
-          <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
-        </div>
-
-        <!-- Zip Code -->
-        <div class="row">
-          <label id="lbl-zip">Zip Code</label>
-          <input id="zip" type="text" inputmode="numeric" pattern="\\d*" maxlength="5" placeholder="e.g., 60612"/>
+        <!-- Search + Zip on one row -->
+        <div class="row row-two">
+          <div class="field">
+            <label id="lbl-search">Search</label>
+            <input id="search" type="text" placeholder="Search partners, services, or notes…"/>
+          </div>
+          <div class="field">
+            <label id="lbl-zip">Zip Code</label>
+            <input id="zip" type="text" inputmode="numeric" pattern="\\d*" maxlength="5" placeholder="e.g., 60612"/>
+          </div>
         </div>
 
         <!-- Partner Program chips -->
@@ -427,7 +445,6 @@ body{
 
   /* Zip helpers */
   function extractZipTokens(str){
-    // returns array of 5-digit ZIPs found in the string
     const tokens = [];
     const m = String(str||'').match(/\d{5}/g);
     if(m){ m.forEach(z=>tokens.push(z)); }
@@ -474,7 +491,6 @@ body{
       els.langBtn.title = t.toggleTitle;
     }
 
-    /* rebuild chips per language and refresh view */
     renderProgramChips();
     renderCategoryChips();
     applyFilters();
@@ -735,9 +751,10 @@ body{
       const fields=(res.meta && res.meta.fields)||[];
       buildHeaderMap(fields);
       data=res.data.map((r,idx)=>{
-        // Build a fast Set of 5-digit ZIPs per row (works even with thousands)
         const zipStr = pick(r, FIELD_ALIASES.zips);
-        const __zipsSet = buildZipSet(zipStr);
+        const __zipsSet = new Set();
+        const m = String(zipStr||'').match(/\d{5}/g);
+        if(m){ m.forEach(z=>__zipsSet.add(z)); }
         return Object.assign({}, r, { __id:idx+1, __zipsSet });
       });
 
