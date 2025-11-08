@@ -474,8 +474,8 @@ body{
   function renderProgramChips(){
     const set=new Set();
     data.forEach(r=>{
-      const prog=(pickLang(r,'program')||'').trim();
-      if(prog) set.add(prog);
+      // Support multiple programs per row
+      splitCats(pickLang(r,'program')).forEach(p => { if(p) set.add(p); });
     });
     const arr=[...set].sort((a,b)=>a.localeCompare(b));
     els.programs.innerHTML='';
@@ -632,9 +632,9 @@ body{
     const sortBy=els.sort.value;
 
     filtered=data.filter(r=>{
-      // Program filter (one value)
-      const prog=(pickLang(r,'program')||'').trim();
-      const inProgram = activePrograms.length ? activePrograms.includes(prog) : true;
+      // Program filter: partner can have multiple programs
+      const programs = splitCats(pickLang(r,'program'));
+      const inProgram = activePrograms.length ? programs.some(p => activePrograms.includes(p)) : true;
 
       // Category filter (multi)
       const cats=splitCats(pickLang(r,'category'));
@@ -649,7 +649,7 @@ body{
         pickLang(r,'intake'),
         pickLang(r,'geoElig'),
         pickLang(r,'finElig'),
-        prog
+        programs.join(' ')
       ].filter(Boolean).join(' ').toLowerCase();
       const inSearch = q ? hay.includes(q) : true;
 
